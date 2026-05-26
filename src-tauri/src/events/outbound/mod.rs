@@ -11,6 +11,8 @@ pub mod will_appear;
 use futures::SinkExt;
 use serde::Serialize;
 
+const MAX_PLUGIN_QUEUE_SIZE: usize = 512;
+
 #[derive(Serialize)]
 struct Coordinates {
 	row: u8,
@@ -62,7 +64,12 @@ async fn send_to_plugin(plugin: &str, data: &impl Serialize) -> Result<(), anyho
 	} else {
 		let mut queues = super::PLUGIN_QUEUES.write().await;
 		if queues.contains_key(plugin) {
-			queues.get_mut(plugin).unwrap().push(message);
+			let queue = queues.get_mut(plugin).unwrap();
+			if queue.len() < MAX_PLUGIN_QUEUE_SIZE {
+				queue.push(message);
+			} else {
+				log::warn!("plugin queue full for \"{plugin}\", dropping message");
+			}
 		} else {
 			queues.insert(plugin.to_owned(), vec![message]);
 		}
@@ -95,10 +102,16 @@ async fn send_to_property_inspector(context: &crate::shared::ActionContext, data
 		socket.send(message).await?;
 	} else {
 		let mut queues = super::PROPERTY_INSPECTOR_QUEUES.write().await;
-		if queues.contains_key(&context.to_string()) {
-			queues.get_mut(&context.to_string()).unwrap().push(message);
+		let key = context.to_string();
+		if queues.contains_key(&key) {
+			let queue = queues.get_mut(&key).unwrap();
+			if queue.len() < MAX_PLUGIN_QUEUE_SIZE {
+				queue.push(message);
+			} else {
+				log::warn!("property inspector queue full for \"{key}\", dropping message");
+			}
 		} else {
-			queues.insert(context.to_string(), vec![message]);
+			queues.insert(key, vec![message]);
 		}
 	}
 
