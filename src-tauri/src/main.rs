@@ -378,6 +378,7 @@ If you have already donated, thank you so much for your support!"#,
 			#[cfg(windows)]
 			futures::executor::block_on(plugins::deactivate_plugins());
 			tokio::spawn(elgato::reset_devices());
+			let _ = std::fs::remove_file(shared::config_dir().join("ports.json"));
 			use tauri_plugin_aptabase::EventTracker;
 			app.flush_events_blocking();
 		}
