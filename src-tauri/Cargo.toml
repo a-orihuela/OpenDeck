@@ -8,6 +8,10 @@ repository = "https://github.com/nekename/OpenDeck"
 default-run = "opendeck"
 edition = "2024"
 
+[[bin]]
+name = "validate-manifest"
+path = "src/bin/validate_manifest.rs"
+
 [build-dependencies]
 tauri-build = { version = "2.5", features = [] }
 built = { version = "0.8", features = ["dependency-tree", "git2"] }
