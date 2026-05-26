@@ -71,11 +71,26 @@ pub async fn install_plugin(app: AppHandle, url: Option<String>, file: Option<St
 				Ok(resp) => resp,
 				Err(error) => return Err(anyhow::Error::from(error).into()),
 			};
-			use std::ops::Deref;
-			match resp.bytes().await {
-				Ok(bytes) => bytes.deref().to_owned(),
-				Err(error) => return Err(anyhow::Error::from(error).into()),
+			let total = resp.content_length();
+			let mut downloaded: u64 = 0;
+			let mut buf: Vec<u8> = match total {
+				Some(n) => Vec::with_capacity(n as usize),
+				None => Vec::new(),
+			};
+			let mut stream = resp.bytes_stream();
+			use futures::StreamExt;
+			while let Some(chunk) = stream.next().await {
+				let chunk = match chunk {
+					Ok(c) => c,
+					Err(error) => return Err(anyhow::Error::from(error).into()),
+				};
+				downloaded += chunk.len() as u64;
+				buf.extend_from_slice(&chunk);
+				if let Some(window) = app.get_webview_window("main") {
+					let _ = window.emit("plugin_install_progress", serde_json::json!({ "downloaded": downloaded, "total": total }));
+				}
 			}
+			buf
 		}
 		Some(path) => match std::fs::read(path) {
 			Ok(bytes) => bytes,

@@ -17,6 +17,7 @@
 	import { actionList, deviceSelector, PRODUCT_NAME } from "$lib/singletons";
 
 	import { invoke } from "@tauri-apps/api/core";
+	import { listen } from "@tauri-apps/api/event";
 	import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 	import { ask, message, open } from "@tauri-apps/plugin-dialog";
 
@@ -28,8 +29,14 @@
 		if (showPopup) installed = await invoke("list_plugins");
 	}, 1e3);
 
+	let installProgress: { downloaded: number; total: number | null } | null = null;
+	listen("plugin_install_progress", ({ payload }: { payload: { downloaded: number; total: number | null } }) => {
+		installProgress = payload;
+	});
+
 	async function installPlugin(name: string, url: string | null, file: string | null, fallback_id: string | null) {
 		if (!file && !await ask(`It may take a while to install the plugin.`, { title: `Install "${name}"?` })) return;
+		installProgress = url ? { downloaded: 0, total: null } : null;
 		try {
 			await invoke("install_plugin", { url, file, fallback_id });
 			message(`Successfully installed "${name}".`, { title: `Installed "${name}"` });
@@ -37,6 +44,8 @@
 			installed = await invoke("list_plugins");
 		} catch (error: any) {
 			message(error, { title: `Failed to install "${name}"` });
+		} finally {
+			installProgress = null;
 		}
 	}
 
@@ -215,6 +224,24 @@
 <Popup show={showPopup} label="Manage plugins">
 	<button class="mr-2 my-1 float-right text-xl text-neutral-300" on:click={() => showPopup = false} aria-label="Close">✕</button>
 	<h2 class="m-2 font-semibold text-xl text-neutral-300">Manage plugins</h2>
+
+	{#if installProgress}
+		<div class="mx-2 mt-4">
+			<p class="text-sm text-neutral-400 mb-1">
+				{#if installProgress.total}
+					Downloading… {Math.round(installProgress.downloaded / 1024)}&#8239;KB / {Math.round(installProgress.total / 1024)}&#8239;KB
+				{:else}
+					Downloading… {Math.round(installProgress.downloaded / 1024)}&#8239;KB
+				{/if}
+			</p>
+			<div class="w-full bg-neutral-700 rounded-full h-2">
+				<div
+					class="bg-blue-500 h-2 rounded-full transition-all"
+					style="width: {installProgress.total ? Math.round((installProgress.downloaded / installProgress.total) * 100) : 100}%"
+				></div>
+			</div>
+		</div>
+	{/if}
 
 	<h2 class="mx-2 mt-6 mb-2 text-lg text-neutral-400">Installed plugins</h2>
 	<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

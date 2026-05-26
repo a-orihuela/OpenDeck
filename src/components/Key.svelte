@@ -13,6 +13,8 @@
 	import { copiedItem, inspectedInstance, inspectedParentAction, openContextMenu } from "$lib/propertyInspector";
 	import { CanvasLock, renderImage } from "$lib/rendererHelper";
 	import { settings } from "$lib/settings";
+	import { connectedPlugins } from "$lib/pluginStatus";
+	import { notify } from "$lib/notifications";
 
 	import { invoke } from "@tauri-apps/api/core";
 	import { listen } from "@tauri-apps/api/event";
@@ -117,7 +119,12 @@
 	async function clear() {
 		$openContextMenu = null;
 		if (!slot) return;
-		await invoke("remove_instance", { context: slot.context });
+		try {
+			await invoke("remove_instance", { context: slot.context });
+		} catch (error: any) {
+			notify(String(error));
+			return;
+		}
 		showEditor = false;
 		slot = null;
 		inslot = slot;
@@ -127,6 +134,7 @@
 
 	let showAlert: boolean = false;
 	let showOk: boolean = false;
+	$: pluginOffline = !!slot && slot.action.plugin !== "opendeck" && !$connectedPlugins.has(slot.action.plugin);
 	let timeouts: number[] = [];
 	listen("show_alert", ({ payload }: { payload: string }) => {
 		if (!slot || payload != slot.context) return;
@@ -161,7 +169,7 @@
 			const unlock = await lock.lock();
 			try {
 				let fallback = sl.action.states[sl.current_state]?.image ?? sl.action.icon;
-				if (state) await renderImage(canvas, context, state, fallback, showOk, showAlert, true, active, pressed, $settings?.rotation);
+				if (state) await renderImage(canvas, context, state, fallback, showOk, showAlert || pluginOffline, true, active, pressed, $settings?.rotation);
 			} finally {
 				unlock();
 			}

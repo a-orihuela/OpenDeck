@@ -10,6 +10,7 @@
 	import { inspectedInstance, inspectedParentAction } from "$lib/propertyInspector";
 
 	import { invoke } from "@tauri-apps/api/core";
+	import { notify } from "$lib/notifications";
 
 	export let device: DeviceInfo;
 	export let profile: Profile;
@@ -33,43 +34,47 @@
 	async function handleDrop({ dataTransfer }: DragEvent, controller: string, position: number) {
 		let context = { device: device.id, profile: profile.id, controller, position };
 		let array = controller == "Encoder" ? profile.sliders : profile.keys;
-		if (dataTransfer?.getData("action")) {
-			let action = JSON.parse(dataTransfer?.getData("action"));
-			if (array[position]) {
-				return;
-			}
-			array[position] = await invoke("create_instance", { context, action });
-			profile = profile;
-		} else if (dataTransfer?.getData("controller")) {
-			let oldArray = dataTransfer?.getData("controller") == "Encoder" ? profile.sliders : profile.keys;
-			let oldPosition = parseInt(dataTransfer?.getData("position"));
-			let response: ActionInstance = await invoke("move_instance", {
-				source: { device: device.id, profile: profile.id, controller: dataTransfer?.getData("controller"), position: oldPosition },
-				destination: context,
-				retain: false,
-			});
-			if (response) {
-				array[position] = response;
-				oldArray[oldPosition] = null;
+		try {
+			if (dataTransfer?.getData("action")) {
+				let action = JSON.parse(dataTransfer?.getData("action"));
+				if (array[position]) return;
+				array[position] = await invoke("create_instance", { context, action });
 				profile = profile;
+			} else if (dataTransfer?.getData("controller")) {
+				let oldArray = dataTransfer?.getData("controller") == "Encoder" ? profile.sliders : profile.keys;
+				let oldPosition = parseInt(dataTransfer?.getData("position"));
+				let response: ActionInstance = await invoke("move_instance", {
+					source: { device: device.id, profile: profile.id, controller: dataTransfer?.getData("controller"), position: oldPosition },
+					destination: context,
+					retain: false,
+				});
+				if (response) {
+					array[position] = response;
+					oldArray[oldPosition] = null;
+					profile = profile;
+				}
 			}
+		} catch (error: any) {
+			notify(String(error));
 		}
 	}
 
 	async function handlePaste(item: CopiedItem, destination: Context) {
 		let array = destination.controller == "Encoder" ? profile.sliders : profile.keys;
-
-		if (item.type == "action") {
-			if (array[destination.position]) return;
-			array[destination.position] = await invoke("create_instance", { context: destination, action: item.action });
-			profile = profile;
-			return;
-		}
-
-		let response: ActionInstance = await invoke("move_instance", { source: item.source, destination, retain: true });
-		if (response) {
-			array[destination.position] = response;
-			profile = profile;
+		try {
+			if (item.type == "action") {
+				if (array[destination.position]) return;
+				array[destination.position] = await invoke("create_instance", { context: destination, action: item.action });
+				profile = profile;
+				return;
+			}
+			let response: ActionInstance = await invoke("move_instance", { source: item.source, destination, retain: true });
+			if (response) {
+				array[destination.position] = response;
+				profile = profile;
+			}
+		} catch (error: any) {
+			notify(String(error));
 		}
 	}
 
