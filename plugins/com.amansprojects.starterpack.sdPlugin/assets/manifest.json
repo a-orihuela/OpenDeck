@@ -28,6 +28,7 @@
 			"Platform": "linux"
 		}
 	],
+	"Capabilities": ["switch_profile", "device_brightness"],
 	"Actions": [
 		{
 			"Icon": "icons/runCommand",

@@ -43,6 +43,14 @@ pub struct DeviceInfo {
 
 pub static DEVICES: LazyLock<DashMap<String, DeviceInfo>> = LazyLock::new(DashMap::new);
 
+/// Per-plugin capability grants loaded from each plugin's manifest at startup.
+pub static PLUGIN_CAPABILITIES: LazyLock<DashMap<String, Vec<String>>> = LazyLock::new(DashMap::new);
+
+/// Returns `true` if the plugin identified by `uuid` has been granted `capability`.
+pub fn has_capability(uuid: &str, capability: &str) -> bool {
+	PLUGIN_CAPABILITIES.get(uuid).is_some_and(|caps| caps.iter().any(|c| c == capability))
+}
+
 /// Get the application configuration directory.
 pub fn config_dir() -> std::path::PathBuf {
 	let app_handle = crate::APP_HANDLE.get().unwrap();

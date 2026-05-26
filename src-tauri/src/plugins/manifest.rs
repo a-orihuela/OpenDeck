@@ -66,6 +66,9 @@ pub struct PluginManifest {
 
 	#[serde(alias = "HasSettingsInterface")]
 	pub has_settings_interface: Option<bool>,
+
+	#[serde(alias = "Capabilities")]
+	pub capabilities: Option<Vec<String>>,
 }
 
 pub fn read_manifest(base_path: &std::path::Path) -> Result<PluginManifest, anyhow::Error> {

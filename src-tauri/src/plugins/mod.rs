@@ -39,8 +39,8 @@ static INSTANCES: LazyLock<Mutex<HashMap<String, PluginInstance>>> = LazyLock::n
 pub static PORT_BASE: LazyLock<u16> = LazyLock::new(|| {
 	let mut base = 57116;
 	loop {
-		let websocket_result = std::net::TcpListener::bind(format!("0.0.0.0:{}", base));
-		let webserver_result = std::net::TcpListener::bind(format!("0.0.0.0:{}", base + 2));
+		let websocket_result = std::net::TcpListener::bind(format!("127.0.0.1:{}", base));
+		let webserver_result = std::net::TcpListener::bind(format!("127.0.0.1:{}", base + 2));
 		if websocket_result.is_ok() && webserver_result.is_ok() {
 			log::debug!("Using ports {} and {}", base, base + 2);
 			break;
@@ -142,6 +142,10 @@ pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<Spa
 		DEVICE_NAMESPACES.write().await.insert(namespace, plugin_uuid.to_owned());
 	}
 
+	if let Some(caps) = manifest.capabilities {
+		crate::shared::PLUGIN_CAPABILITIES.insert(plugin_uuid.clone(), caps);
+	}
+
 	#[cfg(target_os = "windows")]
 	let platform = "windows";
 	#[cfg(target_os = "macos")]
@@ -212,22 +216,27 @@ pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<Spa
 		}
 
 		let info = info_param::make_info(plugin_uuid.to_owned(), manifest.version, false).await;
+		let params_json = serde_json::to_string(&serde_json::json!({
+			"port": *PORT_BASE,
+			"uuid": plugin_uuid,
+			"event": "registerPlugin",
+			"info": serde_json::to_string(&info)?,
+		}))?;
 		window.eval(format!(
-			r#"const opendeckInit = () => {{
+			r#"window.__opendeckParams = {params_json};
+			const opendeckInit = () => {{
 				try {{
 					if (document.readyState !== "complete") throw new Error("not ready");
-					if (typeof connectOpenActionSocket === "function") connectOpenActionSocket({port}, "{uuid}", "{event}", `{info}`);
-					else connectElgatoStreamDeckSocket({port}, "{uuid}", "{event}", `{info}`);
+					const p = window.__opendeckParams;
+					if (typeof connectOpenActionSocket === "function") connectOpenActionSocket(p.port, p.uuid, p.event, p.info);
+					else connectElgatoStreamDeckSocket(p.port, p.uuid, p.event, p.info);
 				}} catch (e) {{
 					setTimeout(opendeckInit, 10);
 				}}
 			}};
 			opendeckInit();
 			"#,
-			port = *PORT_BASE,
-			uuid = plugin_uuid,
-			event = "registerPlugin",
-			info = serde_json::to_string(&info)?
+			params_json = params_json
 		))?;
 
 		INSTANCES.lock().await.insert(plugin_uuid, PluginInstance::Webview);
@@ -504,7 +513,7 @@ pub fn initialise_plugins() {
 
 /// Start the WebSocket server that plugins communicate with.
 async fn init_websocket_server() {
-	let listener = match TcpListener::bind(format!("0.0.0.0:{}", *PORT_BASE)).await {
+	let listener = match TcpListener::bind(format!("127.0.0.1:{}", *PORT_BASE)).await {
 		Ok(listener) => listener,
 		Err(error) => {
 			error!("Failed to bind plugin WebSocket server to socket: {}", error);

@@ -8,7 +8,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
-use log::{debug, trace};
+use log::{debug, trace, warn};
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -80,9 +80,17 @@ pub fn extract<S: Read + Seek>(source: S, target_dir: &Path) -> Result<(), ZipEx
 		}
 
 		let mut outpath = target_dir.to_path_buf();
-		outpath.push(relative_path);
+		outpath.push(&relative_path);
 
 		let name = file.name().replace('\\', "/");
+
+		// Reject entries that escape the target directory via "..", absolute paths, or drive prefixes.
+		if relative_path.components().any(|c| {
+			matches!(c, std::path::Component::ParentDir | std::path::Component::RootDir | std::path::Component::Prefix(_))
+		}) {
+			warn!("zip path traversal detected: skipping entry \"{}\"", name);
+			continue;
+		}
 
 		trace!("Extracting {} to {}", name, outpath.to_string_lossy());
 		if name.ends_with('/') {
