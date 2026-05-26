@@ -14,6 +14,7 @@
 	import { invoke } from "@tauri-apps/api/core";
 	import { listen } from "@tauri-apps/api/event";
 	import { message } from "@tauri-apps/plugin-dialog";
+	import { notify } from "$lib/notifications";
 
 	let showPopup: boolean;
 	let buildInfo: string;
@@ -55,7 +56,11 @@
 				"You may encounter issues if you attempt to restore a backup from a different operating system or architecture.",
 			{ title: "Restoring configuration" },
 		);
-		await invoke("restore_config_directory");
+		try {
+			await invoke("restore_config_directory");
+		} catch (error: any) {
+			notify(String(error));
+		}
 	}
 </script>
 

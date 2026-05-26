@@ -14,6 +14,7 @@
 	import { CanvasLock, renderImage } from "$lib/rendererHelper";
 	import { settings } from "$lib/settings";
 	import { connectedPlugins } from "$lib/pluginStatus";
+	import { notify } from "$lib/notifications";
 
 	import { invoke } from "@tauri-apps/api/core";
 	import { listen } from "@tauri-apps/api/event";
@@ -118,7 +119,12 @@
 	async function clear() {
 		$openContextMenu = null;
 		if (!slot) return;
-		await invoke("remove_instance", { context: slot.context });
+		try {
+			await invoke("remove_instance", { context: slot.context });
+		} catch (error: any) {
+			notify(String(error));
+			return;
+		}
 		showEditor = false;
 		slot = null;
 		inslot = slot;
