@@ -1,17 +1,5 @@
-export type Settings = {
-	version: string;
-	language: string;
-	brightness: number;
-	sleep_timeout_minutes: number;
-	rotation: number;
-	background: boolean;
-	autolaunch: boolean;
-	updatecheck: boolean;
-	statistics: boolean;
-	separatewine: boolean;
-	developer: boolean;
-	disableelgato: boolean;
-};
+export type { Settings } from "./bindings.ts";
+import type { Settings } from "./bindings.ts";
 
 import { invoke } from "@tauri-apps/api/core";
 import { type Writable, writable } from "svelte/store";

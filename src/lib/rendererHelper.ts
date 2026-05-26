@@ -1,5 +1,4 @@
-import type { ActionState } from "./ActionState.ts";
-import type { Context } from "./Context.ts";
+import type { ActionState, Context } from "./bindings.ts";
 
 import { getWebserverUrl } from "./ports.ts";
 

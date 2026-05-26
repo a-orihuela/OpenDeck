@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ActionInstance } from "$lib/ActionInstance";
+	import type { ActionInstance } from "$lib/bindings";
 
 	import { renderImage, resizeImage } from "$lib/rendererHelper";
 

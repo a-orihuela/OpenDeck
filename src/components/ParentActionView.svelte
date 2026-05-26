@@ -1,7 +1,5 @@
 <script lang="ts">
-	import type { Action } from "$lib/Action";
-	import type { ActionInstance } from "$lib/ActionInstance";
-	import type { Profile } from "$lib/Profile";
+	import type { Action, ActionInstance, Profile } from "$lib/bindings";
 
 	import Trash from "phosphor-svelte/lib/Trash";
 	import Key from "./Key.svelte";

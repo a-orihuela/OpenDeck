@@ -1,6 +1,5 @@
 <script lang="ts">
-	import type { DeviceInfo } from "$lib/DeviceInfo";
-	import type { Profile } from "$lib/Profile";
+	import type { DeviceInfo, Profile } from "$lib/bindings";
 
 	import { initPortBase } from "$lib/ports";
 	import { inspectedParentAction } from "$lib/propertyInspector";
