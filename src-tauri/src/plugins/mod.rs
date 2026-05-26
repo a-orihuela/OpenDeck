@@ -37,16 +37,33 @@ pub static DEVICE_NAMESPACES: LazyLock<RwLock<HashMap<String, String>>> = LazyLo
 static INSTANCES: LazyLock<Mutex<HashMap<String, PluginInstance>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 pub static PORT_BASE: LazyLock<u16> = LazyLock::new(|| {
-	let mut base = 57116;
+	let lock_path = crate::shared::config_dir().join("ports.json");
+
+	// Try to reuse previously allocated ports from the lock file.
+	if let Ok(content) = std::fs::read_to_string(&lock_path) {
+		if let Ok(saved) = serde_json::from_str::<u16>(&content) {
+			let ws_ok = std::net::TcpListener::bind(format!("0.0.0.0:{}", saved)).is_ok();
+			let http_ok = std::net::TcpListener::bind(format!("0.0.0.0:{}", saved + 2)).is_ok();
+			if ws_ok && http_ok {
+				log::debug!("Reusing persisted ports {} and {}", saved, saved + 2);
+				return saved;
+			}
+		}
+	}
+
+	// Scan for a free pair of ports and persist the result.
+	let mut base = 57116u16;
 	loop {
-		let websocket_result = std::net::TcpListener::bind(format!("127.0.0.1:{}", base));
-		let webserver_result = std::net::TcpListener::bind(format!("127.0.0.1:{}", base + 2));
-		if websocket_result.is_ok() && webserver_result.is_ok() {
+		let ws_ok = std::net::TcpListener::bind(format!("127.0.0.1:{}", base)).is_ok();
+		let http_ok = std::net::TcpListener::bind(format!("127.0.0.1:{}", base + 2)).is_ok();
+		if ws_ok && http_ok {
 			log::debug!("Using ports {} and {}", base, base + 2);
 			break;
 		}
-		base += 1;
+		base = base.saturating_add(1);
 	}
+
+	let _ = std::fs::write(&lock_path, serde_json::to_string(&base).unwrap());
 	base
 });
 
