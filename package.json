@@ -8,6 +8,7 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"test": "vitest run",
 		"tauri": "tauri"
 	},
 	"devDependencies": {
@@ -16,12 +17,14 @@
 		"@sveltejs/vite-plugin-svelte": "^3.1",
 		"@tailwindcss/vite": "^4.1",
 		"@tauri-apps/cli": "^2.10",
+		"@vitest/coverage-v8": "^2.1.9",
 		"lightningcss": "^1.31",
 		"svelte": "^4.2",
 		"svelte-check": "^4.3",
 		"tailwindcss": "^4.1",
 		"typescript": "^5.9",
-		"vite": "^5.4"
+		"vite": "^5.4",
+		"vitest": "^2.1.9"
 	},
 	"type": "module",
 	"dependencies": {
