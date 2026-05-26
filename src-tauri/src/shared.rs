@@ -43,6 +43,9 @@ pub struct DeviceInfo {
 
 pub static DEVICES: LazyLock<DashMap<String, DeviceInfo>> = LazyLock::new(DashMap::new);
 
+/// Per-plugin crash counts and the start of the current crash window, used by the plugin supervisor.
+pub static PLUGIN_CRASH_COUNTS: LazyLock<DashMap<String, (u8, std::time::Instant)>> = LazyLock::new(DashMap::new);
+
 /// Get the application configuration directory.
 pub fn config_dir() -> std::path::PathBuf {
 	let app_handle = crate::APP_HANDLE.get().unwrap();

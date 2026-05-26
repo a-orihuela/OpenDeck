@@ -26,11 +26,16 @@ pub enum PluginChildType {
 	Node,
 }
 
+struct ProcessHandle {
+	pid: u32,
+	kill_tx: mpsc::SyncSender<()>,
+}
+
 enum PluginInstance {
 	Webview,
-	Wine(Child),
-	Native(Child),
-	Node(Child),
+	Wine(ProcessHandle),
+	Native(ProcessHandle),
+	Node(ProcessHandle),
 }
 
 pub static DEVICE_NAMESPACES: LazyLock<RwLock<HashMap<String, String>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
@@ -367,9 +372,10 @@ pub async fn deactivate_plugin(app: &AppHandle, uuid: &str) -> Result<(), anyhow
 					tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 				}
 			}
-			PluginInstance::Node(mut child) | PluginInstance::Wine(mut child) | PluginInstance::Native(mut child) => {
-				child.kill()?;
-				child.wait()?;
+			PluginInstance::Node(handle) | PluginInstance::Wine(handle) | PluginInstance::Native(handle) => {
+				// Signal the watchdog not to restart, then kill the process by PID.
+				let _ = handle.kill_tx.send(());
+				kill_process(handle.pid);
 			}
 		}
 		Ok(())
@@ -441,18 +447,26 @@ pub fn initialise_plugins() {
 	let (tx, rx) = mpsc::channel::<SpawnRequest>();
 	APP_HANDLE.get().unwrap().manage(tx.clone());
 
+	let tx_for_watchdogs = tx.clone();
 	// Use a dedicated spawner thread so that plugin processes don't die due to PR_SET_PDEATHSIG when the parent Tokio worker exits
-	std::thread::spawn(|| {
+	std::thread::spawn(move || {
 		for f in rx {
 			match f() {
 				Ok((plugin_uuid, child_type, mut command)) => match command.spawn() {
 					Ok(child) => {
+						let pid = child.id();
+						let (kill_tx, kill_rx) = mpsc::sync_channel::<()>(1);
+						let watchdog_uuid = plugin_uuid.clone();
+						let watchdog_spawner_tx = tx_for_watchdogs.clone();
+						std::thread::spawn(move || {
+							supervise_plugin(child, watchdog_uuid, watchdog_spawner_tx, kill_rx);
+						});
 						INSTANCES.blocking_lock().insert(
 							plugin_uuid,
 							match child_type {
-								PluginChildType::Wine => PluginInstance::Wine(child),
-								PluginChildType::Native => PluginInstance::Native(child),
-								PluginChildType::Node => PluginInstance::Node(child),
+								PluginChildType::Wine => PluginInstance::Wine(ProcessHandle { pid, kill_tx }),
+								PluginChildType::Native => PluginInstance::Native(ProcessHandle { pid, kill_tx }),
+								PluginChildType::Node => PluginInstance::Node(ProcessHandle { pid, kill_tx }),
 							},
 						);
 					}
@@ -498,6 +512,70 @@ pub fn initialise_plugins() {
 					let _ = window.eval("void(0);");
 				}
 			}
+		}
+	});
+}
+
+/// Kill a process by PID without requiring ownership of the `Child`.
+fn kill_process(pid: u32) {
+	#[cfg(unix)]
+	unsafe {
+		libc::kill(pid as libc::pid_t, libc::SIGTERM);
+	}
+	#[cfg(windows)]
+	unsafe {
+		use windows_sys::Win32::Foundation::CloseHandle;
+		use windows_sys::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
+		let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
+		if !handle.is_null() {
+			TerminateProcess(handle, 1);
+			CloseHandle(handle);
+		}
+	}
+}
+
+/// Watch a spawned plugin process and restart it with exponential backoff on unexpected exit.
+fn supervise_plugin(mut child: Child, uuid: String, spawner_tx: mpsc::Sender<SpawnRequest>, kill_rx: mpsc::Receiver<()>) {
+	const MAX_CRASHES_PER_WINDOW: u8 = 5;
+	const CRASH_WINDOW_SECS: u64 = 60;
+
+	let _ = child.wait();
+
+	if kill_rx.try_recv().is_ok() {
+		return;
+	}
+
+	let crash_count = {
+		let mut entry = crate::shared::PLUGIN_CRASH_COUNTS
+			.entry(uuid.clone())
+			.or_insert((0u8, std::time::Instant::now()));
+		if entry.1.elapsed().as_secs() >= CRASH_WINDOW_SECS {
+			entry.0 = 0;
+			entry.1 = std::time::Instant::now();
+		}
+		entry.0 = entry.0.saturating_add(1);
+		if entry.0 == 3 {
+			log::warn!("plugin \"{uuid}\" has crashed 3 times rapidly; it may be unstable");
+		}
+		entry.0
+	};
+
+	if crash_count > MAX_CRASHES_PER_WINDOW {
+		log::error!("plugin \"{uuid}\" has crashed too many times within {CRASH_WINDOW_SECS}s; giving up");
+		return;
+	}
+
+	let delay_secs = 1u64.checked_shl(crash_count as u32).unwrap_or(32).min(32);
+	std::thread::sleep(std::time::Duration::from_secs(delay_secs));
+
+	if kill_rx.try_recv().is_ok() {
+		return;
+	}
+
+	let path = crate::shared::config_dir().join("plugins").join(&uuid);
+	tauri::async_runtime::spawn(async move {
+		if let Err(e) = initialise_plugin(path, spawner_tx).await {
+			log::warn!("failed to restart plugin \"{uuid}\": {e:#}");
 		}
 	});
 }
