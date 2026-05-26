@@ -87,3 +87,62 @@ pub fn read_manifest(base_path: &std::path::Path) -> Result<PluginManifest, anyh
 
 	serde_json::from_value(manifest).context("failed to parse manifest")
 }
+
+#[cfg(test)]
+mod tests {
+	use super::read_manifest;
+
+	fn write_manifest(dir: &std::path::Path, json: &str) {
+		std::fs::write(dir.join("manifest.json"), json).unwrap();
+	}
+
+	#[test]
+	fn valid_manifest_parses_correctly() {
+		let dir = tempfile::tempdir().unwrap();
+		write_manifest(
+			dir.path(),
+			r#"{
+				"Name": "Test Plugin",
+				"Author": "Test Author",
+				"Version": "1.0.0",
+				"Icon": "icons/plugin",
+				"OS": [{ "Platform": "linux" }],
+				"Actions": [{
+					"Name": "Test Action",
+					"UUID": "com.test.action",
+					"States": [{ "Image": "actionDefaultImage" }],
+					"Controllers": ["Keypad"]
+				}]
+			}"#,
+		);
+		let manifest = read_manifest(dir.path()).unwrap();
+		assert_eq!(manifest.name, "Test Plugin");
+		assert_eq!(manifest.author, "Test Author");
+		assert_eq!(manifest.version, "1.0.0");
+		assert_eq!(manifest.actions.len(), 1);
+		assert_eq!(manifest.actions[0].uuid, "com.test.action");
+	}
+
+	#[test]
+	fn missing_manifest_file_returns_error() {
+		let dir = tempfile::tempdir().unwrap();
+		assert!(read_manifest(dir.path()).is_err());
+	}
+
+	#[test]
+	fn invalid_json_returns_error() {
+		let dir = tempfile::tempdir().unwrap();
+		write_manifest(dir.path(), "this is not json");
+		assert!(read_manifest(dir.path()).is_err());
+	}
+
+	#[test]
+	fn missing_required_name_field_returns_error() {
+		let dir = tempfile::tempdir().unwrap();
+		write_manifest(
+			dir.path(),
+			r#"{ "Author": "A", "Version": "1.0.0", "Icon": "i", "OS": [], "Actions": [] }"#,
+		);
+		assert!(read_manifest(dir.path()).is_err());
+	}
+}

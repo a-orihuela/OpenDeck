@@ -230,7 +230,7 @@ pub struct Context {
 }
 
 /// Information about the slot and index an instance is located in.
-#[derive(Clone, PartialEq, Eq, Hash, serde_with::SerializeDisplay, serde_with::DeserializeFromStr)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, serde_with::SerializeDisplay, serde_with::DeserializeFromStr)]
 pub struct ActionContext {
 	pub device: String,
 	pub profile: String,
@@ -353,3 +353,53 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 	);
 	RwLock::new(hashmap)
 });
+
+#[cfg(test)]
+mod tests {
+	use super::ActionContext;
+	use std::str::FromStr;
+
+	fn sample_context() -> ActionContext {
+		ActionContext {
+			device: "dev1".to_owned(),
+			profile: "Default".to_owned(),
+			controller: "Keypad".to_owned(),
+			position: 3,
+			index: 0,
+		}
+	}
+
+	#[test]
+	fn action_context_display_round_trip() {
+		let ctx = sample_context();
+		let serialised = ctx.to_string();
+		let parsed = ActionContext::from_str(&serialised).unwrap();
+		assert_eq!(ctx, parsed);
+	}
+
+	#[test]
+	fn action_context_display_format() {
+		let ctx = sample_context();
+		assert_eq!(ctx.to_string(), "dev1.Default.Keypad.3.0");
+	}
+
+	#[test]
+	fn action_context_from_str_too_few_segments() {
+		assert!(ActionContext::from_str("dev1.Default.Keypad").is_err());
+	}
+
+	#[test]
+	fn action_context_from_str_invalid_position() {
+		assert!(ActionContext::from_str("dev1.Default.Keypad.notanumber.0").is_err());
+	}
+
+	#[test]
+	fn action_context_from_str_with_high_index() {
+		let ctx = ActionContext::from_str("ABC12345.Gaming.Encoder.7.255").unwrap();
+		assert_eq!(ctx.device, "ABC12345");
+		assert_eq!(ctx.profile, "Gaming");
+		assert_eq!(ctx.controller, "Encoder");
+		assert_eq!(ctx.position, 7);
+		assert_eq!(ctx.index, 255);
+	}
+}

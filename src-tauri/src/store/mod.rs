@@ -169,3 +169,48 @@ pub fn get_settings() -> Store<Settings> {
 
 pub static SETTINGS_MUT: std::sync::LazyLock<tokio::sync::Mutex<Store<Settings>>> =
 	std::sync::LazyLock::new(|| tokio::sync::Mutex::new(Store::new_concurrent("settings", &crate::shared::config_dir(), Settings::default())));
+
+#[cfg(test)]
+mod tests {
+	use super::{Settings, Store};
+
+	#[test]
+	fn settings_store_save_and_reload() {
+		let dir = tempfile::tempdir().unwrap();
+
+		let mut store = Store::<Settings>::new("settings", dir.path(), Settings::default()).unwrap();
+		store.value.language = "es".to_owned();
+		store.value.brightness = 75;
+		store.save().unwrap();
+
+		let reloaded = Store::<Settings>::new("settings", dir.path(), Settings::default()).unwrap();
+		assert_eq!(reloaded.value.language, "es");
+		assert_eq!(reloaded.value.brightness, 75);
+	}
+
+	#[test]
+	fn settings_store_uses_default_when_file_missing() {
+		let dir = tempfile::tempdir().unwrap();
+
+		let store = Store::<Settings>::new("settings", dir.path(), Settings::default()).unwrap();
+		assert_eq!(store.value.language, Settings::default().language);
+		assert_eq!(store.value.brightness, Settings::default().brightness);
+	}
+
+	#[test]
+	fn settings_store_recovers_from_corrupt_main_file() {
+		let dir = tempfile::tempdir().unwrap();
+
+		// Write valid data to the file, then corrupt it.
+		let mut store = Store::<Settings>::new("settings", dir.path(), Settings::default()).unwrap();
+		store.value.language = "fr".to_owned();
+		store.save().unwrap();
+
+		// Overwrite the main file with garbage.
+		std::fs::write(dir.path().join("settings.json"), b"not valid json").unwrap();
+
+		// Should fall back to default because no temp or backup file exists.
+		let reloaded = Store::<Settings>::new("settings", dir.path(), Settings::default()).unwrap();
+		assert_eq!(reloaded.value.language, Settings::default().language);
+	}
+}
