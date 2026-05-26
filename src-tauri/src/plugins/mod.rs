@@ -212,22 +212,27 @@ pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<Spa
 		}
 
 		let info = info_param::make_info(plugin_uuid.to_owned(), manifest.version, false).await;
+		let params_json = serde_json::to_string(&serde_json::json!({
+			"port": *PORT_BASE,
+			"uuid": plugin_uuid,
+			"event": "registerPlugin",
+			"info": serde_json::to_string(&info)?,
+		}))?;
 		window.eval(format!(
-			r#"const opendeckInit = () => {{
+			r#"window.__opendeckParams = {params_json};
+			const opendeckInit = () => {{
 				try {{
 					if (document.readyState !== "complete") throw new Error("not ready");
-					if (typeof connectOpenActionSocket === "function") connectOpenActionSocket({port}, "{uuid}", "{event}", `{info}`);
-					else connectElgatoStreamDeckSocket({port}, "{uuid}", "{event}", `{info}`);
+					const p = window.__opendeckParams;
+					if (typeof connectOpenActionSocket === "function") connectOpenActionSocket(p.port, p.uuid, p.event, p.info);
+					else connectElgatoStreamDeckSocket(p.port, p.uuid, p.event, p.info);
 				}} catch (e) {{
 					setTimeout(opendeckInit, 10);
 				}}
 			}};
 			opendeckInit();
 			"#,
-			port = *PORT_BASE,
-			uuid = plugin_uuid,
-			event = "registerPlugin",
-			info = serde_json::to_string(&info)?
+			params_json = params_json
 		))?;
 
 		INSTANCES.lock().await.insert(plugin_uuid, PluginInstance::Webview);
