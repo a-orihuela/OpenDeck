@@ -142,6 +142,10 @@ pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<Spa
 		DEVICE_NAMESPACES.write().await.insert(namespace, plugin_uuid.to_owned());
 	}
 
+	if let Some(caps) = manifest.capabilities {
+		crate::shared::PLUGIN_CAPABILITIES.insert(plugin_uuid.clone(), caps);
+	}
+
 	#[cfg(target_os = "windows")]
 	let platform = "windows";
 	#[cfg(target_os = "macos")]
