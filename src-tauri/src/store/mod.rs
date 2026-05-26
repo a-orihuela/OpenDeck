@@ -124,7 +124,7 @@ where
 	}
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, specta::Type)]
 #[serde(default)]
 pub struct Settings {
 	pub version: String,

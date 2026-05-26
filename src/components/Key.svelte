@@ -1,7 +1,5 @@
 <script lang="ts">
-	import type { ActionInstance } from "$lib/ActionInstance";
-	import type { ActionState } from "$lib/ActionState";
-	import type { Context } from "$lib/Context";
+	import type { ActionInstance, ActionState, Context } from "$lib/bindings";
 	import type { CopiedItem } from "$lib/propertyInspector";
 
 	import Clipboard from "phosphor-svelte/lib/Clipboard";

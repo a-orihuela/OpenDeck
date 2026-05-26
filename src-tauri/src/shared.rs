@@ -27,7 +27,7 @@ pub fn copy_dir(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<(), std:
 
 /// Metadata of a device.
 #[serde_inline_default]
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, specta::Type)]
 pub struct DeviceInfo {
 	pub id: String,
 	#[serde_inline_default(String::new())]
@@ -50,6 +50,9 @@ pub static PLUGIN_CAPABILITIES: LazyLock<DashMap<String, Vec<String>>> = LazyLoc
 pub fn has_capability(uuid: &str, capability: &str) -> bool {
 	PLUGIN_CAPABILITIES.get(uuid).is_some_and(|caps| caps.iter().any(|c| c == capability))
 }
+
+/// Per-plugin crash counts and the start of the current crash window, used by the plugin supervisor.
+pub static PLUGIN_CRASH_COUNTS: LazyLock<DashMap<String, (u8, std::time::Instant)>> = LazyLock::new(DashMap::new);
 
 /// Get the application configuration directory.
 pub fn config_dir() -> std::path::PathBuf {
@@ -81,6 +84,12 @@ pub fn convert_icon(path: String) -> String {
 
 #[derive(Clone, Copy, Serialize)]
 pub struct FontSize(pub u16);
+
+impl specta::Type for FontSize {
+	fn definition(types: &mut specta::Types) -> specta::datatype::DataType {
+		<u16 as specta::Type>::definition(types)
+	}
+}
 impl<'de> Deserialize<'de> for FontSize {
 	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
 	where
@@ -118,7 +127,7 @@ impl<'de> Deserialize<'de> for FontSize {
 }
 
 /// A state of an action.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, specta::Type)]
 #[serde(default)]
 pub struct ActionState {
 	#[serde(alias = "Image")]
@@ -177,7 +186,7 @@ impl Default for ActionState {
 }
 
 #[serde_inline_default]
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, specta::Type)]
 pub struct Category {
 	pub icon: Option<String>,
 	pub actions: Vec<Action>,
@@ -185,7 +194,7 @@ pub struct Category {
 
 /// An action, deserialised from the plugin manifest.
 #[serde_inline_default]
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, specta::Type)]
 pub struct Action {
 	#[serde(alias = "Name")]
 	pub name: String,
@@ -229,7 +238,7 @@ pub struct Action {
 }
 
 /// Location metadata of a slot.
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 pub struct Context {
 	pub device: String,
 	pub profile: String,
@@ -275,6 +284,12 @@ impl std::str::FromStr for ActionContext {
 	}
 }
 
+impl specta::Type for ActionContext {
+	fn definition(types: &mut specta::Types) -> specta::datatype::DataType {
+		<String as specta::Type>::definition(types)
+	}
+}
+
 impl ActionContext {
 	pub fn from_context(context: Context, index: u16) -> Self {
 		Self {
@@ -305,17 +320,18 @@ impl From<&ActionContext> for Context {
 }
 
 /// An instance of an action.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, specta::Type)]
 pub struct ActionInstance {
 	pub action: Action,
 	pub context: ActionContext,
 	pub states: Vec<ActionState>,
 	pub current_state: u16,
+	#[specta(type = specta_typescript::Any)]
 	pub settings: serde_json::Value,
 	pub children: Option<Vec<ActionInstance>>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, specta::Type)]
 pub struct Profile {
 	pub id: String,
 	pub keys: Vec<Option<ActionInstance>>,

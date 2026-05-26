@@ -1,8 +1,5 @@
 <script lang="ts">
-	import type { ActionInstance } from "$lib/ActionInstance";
-	import type { Context } from "$lib/Context";
-	import type { DeviceInfo } from "$lib/DeviceInfo";
-	import type { Profile } from "$lib/Profile";
+	import type { ActionInstance, Context, DeviceInfo, Profile } from "$lib/bindings";
 	import type { CopiedItem } from "$lib/propertyInspector";
 
 	import Key from "./Key.svelte";

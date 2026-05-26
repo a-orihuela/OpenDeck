@@ -1,7 +1,5 @@
 <script lang="ts">
-	import type { ActionInstance } from "$lib/ActionInstance";
-	import type { DeviceInfo } from "$lib/DeviceInfo";
-	import type { Profile } from "$lib/Profile";
+	import type { ActionInstance, DeviceInfo, Profile } from "$lib/bindings";
 
 	import { getWebserverUrl, getWebSocketPort } from "$lib/ports";
 	import { inspectedInstance } from "$lib/propertyInspector";

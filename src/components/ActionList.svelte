@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Action } from "$lib/Action";
+	import type { Action } from "$lib/bindings";
 
 	import MagnifyingGlass from "phosphor-svelte/lib/MagnifyingGlass";
 

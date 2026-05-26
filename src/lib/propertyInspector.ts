@@ -1,5 +1,4 @@
-import type { Action } from "./Action.ts";
-import type { Context } from "./Context.ts";
+import type { Action, Context } from "./bindings.ts";
 
 import { type Writable, writable } from "svelte/store";
 

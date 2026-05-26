@@ -57,6 +57,45 @@ async fn main() {
 	log_panics::init();
 	let _ = fix_path_env::fix();
 
+	// Export TypeScript bindings for all shared types during development builds.
+	// This regenerates src/lib/bindings.ts automatically on every debug build.
+	//
+	// Uses a plain identity format (no serde-alias processing) so the emitted
+	// TypeScript reflects the serialize-time field names, which is what the
+	// frontend receives over Tauri IPC.
+	#[cfg(debug_assertions)]
+	{
+		use specta::Types;
+		use specta_typescript::Typescript;
+
+		struct SerializeFormat;
+		impl specta::Format for SerializeFormat {
+			fn map_types(&self, types: &specta::Types) -> Result<std::borrow::Cow<'_, specta::Types>, specta::FormatError> {
+				Ok(std::borrow::Cow::Owned(types.clone()))
+			}
+			fn map_type(&self, _types: &specta::Types, dt: &specta::datatype::DataType) -> Result<std::borrow::Cow<'_, specta::datatype::DataType>, specta::FormatError> {
+				Ok(std::borrow::Cow::Owned(dt.clone()))
+			}
+		}
+
+		let types = Types::default()
+			.register::<crate::shared::DeviceInfo>()
+			.register::<crate::shared::Action>()
+			.register::<crate::shared::ActionInstance>()
+			.register::<crate::shared::Context>()
+			.register::<crate::shared::Profile>()
+			.register::<crate::shared::Category>()
+			.register::<crate::store::Settings>();
+
+		if let Err(e) = Typescript::default().export_to(
+			concat!(env!("CARGO_MANIFEST_DIR"), "/../src/lib/bindings.ts"),
+			&types,
+			SerializeFormat,
+		) {
+			eprintln!("Warning: failed to export TypeScript bindings: {e}");
+		}
+	}
+
 	#[cfg(target_os = "linux")]
 	// SAFETY: std::env::set_var can cause race conditions in multithreaded contexts. We have not spawned any other threads at this point.
 	unsafe {

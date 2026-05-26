@@ -1,37 +1,24 @@
 pub mod info_param;
 pub mod manifest;
+mod spawn;
 mod webserver;
+mod websocket;
 
 use crate::APP_HANDLE;
-use crate::built_info::TARGET;
-use crate::shared::{CATEGORIES, Category, config_dir, convert_icon, is_flatpak, log_dir};
+use crate::shared::{CATEGORIES, Category, config_dir, convert_icon, log_dir};
 
 use std::collections::HashMap;
-use std::process::{Child, Command, Stdio};
 use std::sync::{LazyLock, mpsc};
 use std::{fs, path};
 
 use tauri::{AppHandle, Manager};
 
-use futures::StreamExt;
-use tokio::net::{TcpListener, TcpStream};
-
 use anyhow::anyhow;
 use log::{error, warn};
 use tokio::sync::{Mutex, RwLock};
 
-pub enum PluginChildType {
-	Wine,
-	Native,
-	Node,
-}
-
-enum PluginInstance {
-	Webview,
-	Wine(Child),
-	Native(Child),
-	Node(Child),
-}
+pub use spawn::SpawnRequest;
+use spawn::{PluginChildType, PluginInstance, ProcessHandle, kill_process, spawn_plugin, supervise_plugin};
 
 pub static DEVICE_NAMESPACES: LazyLock<RwLock<HashMap<String, String>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
 static INSTANCES: LazyLock<Mutex<HashMap<String, PluginInstance>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -66,23 +53,6 @@ pub static PORT_BASE: LazyLock<u16> = LazyLock::new(|| {
 	let _ = std::fs::write(&lock_path, serde_json::to_string(&base).unwrap());
 	base
 });
-
-/// Attach a kernel-enforced "die when parent dies" signal to a plugin child process.
-#[cfg(target_os = "linux")]
-fn attach_parent_death_signal(command: &mut Command) {
-	use std::os::unix::process::CommandExt;
-	// SAFETY: `libc::prctl` is async-signal-safe.
-	unsafe {
-		command.pre_exec(move || {
-			if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM as libc::c_ulong) != 0 {
-				return Err(std::io::Error::last_os_error());
-			}
-			Ok(())
-		});
-	}
-}
-
-pub type SpawnRequest = Box<dyn FnOnce() -> Result<(String, PluginChildType, Command), anyhow::Error> + Send>;
 
 /// Initialise a plugin from a given directory.
 pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<SpawnRequest>) -> anyhow::Result<()> {
@@ -174,7 +144,6 @@ pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<Spa
 	let mut use_wine = false;
 	let mut supported = false;
 
-	// Determine the method used to run the plugin based on its supported operating systems and the current operating system.
 	for os in manifest.os {
 		if os.platform == platform {
 			#[cfg(target_os = "windows")]
@@ -189,10 +158,9 @@ pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<Spa
 			if manifest.code_path_linux.is_some() {
 				code_path = manifest.code_path_linux;
 			}
-			code_path = manifest.code_paths.and_then(|p| p.get(TARGET).cloned()).or(code_path);
+			code_path = manifest.code_paths.and_then(|p| p.get(crate::built_info::TARGET).cloned()).or(code_path);
 
 			use_wine = false;
-
 			supported = true;
 			break;
 		} else if os.platform == "windows" {
@@ -209,155 +177,8 @@ pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<Spa
 		return Err(anyhow!("unsupported on platform {}", platform));
 	}
 
-	let code_path = code_path.unwrap();
-	let args = [
-		"-port".to_owned(),
-		PORT_BASE.to_string(),
-		"-pluginUUID".to_owned(),
-		plugin_uuid.clone(),
-		"-registerEvent".to_owned(),
-		"registerPlugin".to_owned(),
-		"-info".to_owned(),
-	];
-
-	if code_path.to_lowercase().ends_with(".html") || code_path.to_lowercase().ends_with(".htm") || code_path.to_lowercase().ends_with(".xhtml") {
-		let url = format!("http://localhost:{}/", *PORT_BASE + 2) + path.join(code_path).to_str().unwrap();
-		let window = tauri::WebviewWindowBuilder::new(APP_HANDLE.get().unwrap(), plugin_uuid.replace('.', "_"), tauri::WebviewUrl::External(url.parse()?))
-			.title(manifest.name)
-			.visible(false)
-			.build()?;
-
-		if fs::exists(path.join("debug")).unwrap_or(false) {
-			let _ = window.show();
-			window.open_devtools();
-		}
-
-		let info = info_param::make_info(plugin_uuid.to_owned(), manifest.version, false).await;
-		let params_json = serde_json::to_string(&serde_json::json!({
-			"port": *PORT_BASE,
-			"uuid": plugin_uuid,
-			"event": "registerPlugin",
-			"info": serde_json::to_string(&info)?,
-		}))?;
-		window.eval(format!(
-			r#"window.__opendeckParams = {params_json};
-			const opendeckInit = () => {{
-				try {{
-					if (document.readyState !== "complete") throw new Error("not ready");
-					const p = window.__opendeckParams;
-					if (typeof connectOpenActionSocket === "function") connectOpenActionSocket(p.port, p.uuid, p.event, p.info);
-					else connectElgatoStreamDeckSocket(p.port, p.uuid, p.event, p.info);
-				}} catch (e) {{
-					setTimeout(opendeckInit, 10);
-				}}
-			}};
-			opendeckInit();
-			"#,
-			params_json = params_json
-		))?;
-
-		INSTANCES.lock().await.insert(plugin_uuid, PluginInstance::Webview);
-	} else if code_path.to_lowercase().ends_with(".js") || code_path.to_lowercase().ends_with(".mjs") || code_path.to_lowercase().ends_with(".cjs") {
-		// Check for Node.js installation and version in one go.
-		let command = if is_flatpak() { "flatpak-spawn" } else { "node" };
-		let extra_args = if is_flatpak() { vec!["--host", "node"] } else { vec![] };
-		let version_output = Command::new(command).args(&extra_args).arg("--version").output();
-		if version_output.is_err() || String::from_utf8(version_output.unwrap().stdout).unwrap().trim() < "v20.0.0" {
-			return Err(anyhow!("Node.js version 20.0.0 or higher is required"));
-		}
-
-		let info = info_param::make_info(plugin_uuid.to_owned(), manifest.version, true).await;
-		let log_file = fs::File::create(log_dir().join("plugins").join(format!("{plugin_uuid}.log")))?;
-
-		spawner_tx
-			.send(Box::new(move || {
-				let mut command = Command::new(command);
-				command
-					.current_dir(path)
-					.args(extra_args)
-					.arg(code_path)
-					.args(args)
-					.arg(serde_json::to_string(&info)?)
-					.stdout(Stdio::from(log_file.try_clone()?))
-					.stderr(Stdio::from(log_file));
-				#[cfg(target_os = "linux")]
-				attach_parent_death_signal(&mut command);
-				#[cfg(target_os = "windows")]
-				{
-					use std::os::windows::process::CommandExt;
-					command.creation_flags(0x08000000);
-				}
-				Ok((plugin_uuid, PluginChildType::Node, command))
-			}))
-			.map_err(|e| anyhow!(e.to_string()))?;
-	} else if use_wine {
-		let command = if is_flatpak() { "flatpak-spawn" } else { "wine" };
-		let extra_args = if is_flatpak() { vec!["--host", "wine"] } else { vec![] };
-		let result = Command::new(command)
-			.args(&extra_args)
-			.arg("--version")
-			.stdout(Stdio::null())
-			.stderr(Stdio::null())
-			.spawn()
-			.and_then(|mut child| child.wait())
-			.map(|status| status.success());
-		if !matches!(result, Ok(true)) {
-			return Err(anyhow!("failed to detect an installation of Wine"));
-		}
-
-		let info = info_param::make_info(plugin_uuid.to_owned(), manifest.version, true).await;
-		let log_file = fs::File::create(log_dir().join("plugins").join(format!("{plugin_uuid}.log")))?;
-
-		spawner_tx
-			.send(Box::new(move || {
-				let mut command = Command::new(command);
-				command
-					.current_dir(&path)
-					.args(extra_args)
-					.arg(code_path)
-					.args(args)
-					.arg(serde_json::to_string(&info)?)
-					.stdout(Stdio::from(log_file.try_clone()?))
-					.stderr(Stdio::from(log_file));
-				if crate::store::get_settings().value.separatewine {
-					command.env("WINEPREFIX", path.join("wineprefix").to_string_lossy().to_string());
-				} else {
-					let _ = fs::remove_dir_all(path.join("wineprefix"));
-				}
-				#[cfg(target_os = "linux")]
-				attach_parent_death_signal(&mut command);
-				Ok((plugin_uuid, PluginChildType::Wine, command))
-			}))
-			.map_err(|e| anyhow!(e.to_string()))?;
-	} else {
-		let info = info_param::make_info(plugin_uuid.to_owned(), manifest.version, false).await;
-		let log_file = fs::File::create(log_dir().join("plugins").join(format!("{plugin_uuid}.log")))?;
-
-		#[cfg(unix)]
-		{
-			use std::os::unix::fs::PermissionsExt;
-			fs::set_permissions(path.join(&code_path), fs::Permissions::from_mode(0o755))?;
-		}
-
-		spawner_tx
-			.send(Box::new(move || {
-				let mut command = Command::new(path.join(code_path));
-				command
-					.current_dir(path)
-					.args(args)
-					.arg(serde_json::to_string(&info)?)
-					.stdout(Stdio::from(log_file.try_clone()?))
-					.stderr(Stdio::from(log_file));
-				#[cfg(target_os = "linux")]
-				attach_parent_death_signal(&mut command);
-				#[cfg(target_os = "windows")]
-				{
-					use std::os::windows::process::CommandExt;
-					command.creation_flags(0x08000000);
-				}
-				Ok((plugin_uuid, PluginChildType::Native, command))
-			}))
-			.map_err(|e| anyhow!(e.to_string()))?;
+	if let Some(instance) = spawn_plugin(plugin_uuid.clone(), path.clone(), code_path.unwrap(), use_wine, manifest.name, manifest.version, spawner_tx).await? {
+		INSTANCES.lock().await.insert(plugin_uuid, instance);
 	}
 
 	if let Some(applications) = manifest.applications_to_monitor
@@ -393,9 +214,9 @@ pub async fn deactivate_plugin(app: &AppHandle, uuid: &str) -> Result<(), anyhow
 					tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 				}
 			}
-			PluginInstance::Node(mut child) | PluginInstance::Wine(mut child) | PluginInstance::Native(mut child) => {
-				child.kill()?;
-				child.wait()?;
+			PluginInstance::Node(handle) | PluginInstance::Wine(handle) | PluginInstance::Native(handle) => {
+				let _ = handle.kill_tx.send(());
+				kill_process(handle.pid);
 			}
 		}
 		Ok(())
@@ -419,7 +240,7 @@ pub async fn deactivate_plugins() {
 
 /// Initialise plugins from the plugins directory.
 pub fn initialise_plugins() {
-	tokio::spawn(init_websocket_server());
+	tokio::spawn(websocket::init_websocket_server());
 	tokio::spawn(webserver::init_webserver(config_dir()));
 
 	let plugin_dir = config_dir().join("plugins");
@@ -467,18 +288,26 @@ pub fn initialise_plugins() {
 	let (tx, rx) = mpsc::channel::<SpawnRequest>();
 	APP_HANDLE.get().unwrap().manage(tx.clone());
 
+	let tx_for_watchdogs = tx.clone();
 	// Use a dedicated spawner thread so that plugin processes don't die due to PR_SET_PDEATHSIG when the parent Tokio worker exits
-	std::thread::spawn(|| {
+	std::thread::spawn(move || {
 		for f in rx {
 			match f() {
 				Ok((plugin_uuid, child_type, mut command)) => match command.spawn() {
 					Ok(child) => {
+						let pid = child.id();
+						let (kill_tx, kill_rx) = mpsc::sync_channel::<()>(1);
+						let watchdog_uuid = plugin_uuid.clone();
+						let watchdog_spawner_tx = tx_for_watchdogs.clone();
+						std::thread::spawn(move || {
+							supervise_plugin(child, watchdog_uuid, watchdog_spawner_tx, kill_rx);
+						});
 						INSTANCES.blocking_lock().insert(
 							plugin_uuid,
 							match child_type {
-								PluginChildType::Wine => PluginInstance::Wine(child),
-								PluginChildType::Native => PluginInstance::Native(child),
-								PluginChildType::Node => PluginInstance::Node(child),
+								PluginChildType::Wine => PluginInstance::Wine(ProcessHandle { pid, kill_tx }),
+								PluginChildType::Native => PluginInstance::Native(ProcessHandle { pid, kill_tx }),
+								PluginChildType::Node => PluginInstance::Node(ProcessHandle { pid, kill_tx }),
 							},
 						);
 					}
@@ -489,7 +318,6 @@ pub fn initialise_plugins() {
 		}
 	});
 
-	// Iterate through all directory entries in the plugins folder and initialise them as plugins if appropriate
 	for entry in entries {
 		if let Ok(entry) = entry {
 			let path = match entry.metadata().unwrap().is_symlink() {
@@ -526,48 +354,4 @@ pub fn initialise_plugins() {
 			}
 		}
 	});
-}
-
-/// Start the WebSocket server that plugins communicate with.
-async fn init_websocket_server() {
-	let listener = match TcpListener::bind(format!("127.0.0.1:{}", *PORT_BASE)).await {
-		Ok(listener) => listener,
-		Err(error) => {
-			error!("Failed to bind plugin WebSocket server to socket: {}", error);
-			return;
-		}
-	};
-
-	#[cfg(windows)]
-	{
-		use std::os::windows::io::AsRawSocket;
-		use windows_sys::Win32::Foundation::{HANDLE_FLAG_INHERIT, SetHandleInformation};
-
-		unsafe { SetHandleInformation(listener.as_raw_socket() as _, HANDLE_FLAG_INHERIT, 0) };
-	}
-
-	while let Ok((stream, _)) = listener.accept().await {
-		accept_connection(stream).await;
-	}
-}
-
-/// Handle incoming data from a WebSocket connection.
-async fn accept_connection(stream: TcpStream) {
-	let mut socket = match tokio_tungstenite::accept_async(stream).await {
-		Ok(socket) => socket,
-		Err(error) => {
-			warn!("Failed to complete WebSocket handshake: {}", error);
-			return;
-		}
-	};
-
-	let Ok(register_event) = socket.next().await.unwrap() else {
-		return;
-	};
-	match serde_json::from_str(&register_event.clone().into_text().unwrap()) {
-		Ok(event) => crate::events::register_plugin(event, socket).await,
-		Err(_) => {
-			let _ = crate::events::inbound::process_incoming_message(Ok(register_event), "", false).await;
-		}
-	}
 }
