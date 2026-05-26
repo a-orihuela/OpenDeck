@@ -22,6 +22,15 @@ pub async fn registered_plugins() -> Vec<String> {
 	PLUGIN_SOCKETS.lock().await.keys().map(|x| x.to_owned()).collect()
 }
 
+fn emit_plugin_status(uuid: &str, connected: bool) {
+	use tauri::{Emitter, Manager};
+	if let Some(app) = crate::APP_HANDLE.get() {
+		if let Some(window) = app.get_webview_window("main") {
+			let _ = window.emit("plugin_status_changed", serde_json::json!({ "uuid": uuid, "connected": connected }));
+		}
+	}
+}
+
 /// Register a plugin or property inspector to send and receive events with its WebSocket.
 pub async fn register_plugin(event: RegisterEvent, stream: WebSocketStream<TcpStream>) {
 	let (mut read, write) = stream.split();
@@ -35,10 +44,12 @@ pub async fn register_plugin(event: RegisterEvent, stream: WebSocketStream<TcpSt
 				let _ = read.flush().await;
 			}
 			PLUGIN_SOCKETS.lock().await.insert(uuid.clone(), read);
+			emit_plugin_status(&uuid, true);
 			tokio::spawn(async move {
 				let uuid = uuid;
 				write.for_each(|event| inbound::process_incoming_message(event, &uuid, false)).await;
 				PLUGIN_SOCKETS.lock().await.remove(&uuid);
+				emit_plugin_status(&uuid, false);
 			});
 		}
 		RegisterEvent::RegisterPropertyInspector { uuid } => {
