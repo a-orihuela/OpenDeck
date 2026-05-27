@@ -7,12 +7,28 @@
 	import { inspectedInstance, inspectedParentAction } from "$lib/propertyInspector";
 
 	import { invoke } from "@tauri-apps/api/core";
+	import { listen } from "@tauri-apps/api/event";
 	import { notify } from "$lib/notifications";
+	import { onDestroy } from "svelte";
 
 	export let device: DeviceInfo;
 	export let profile: Profile;
 
 	export let selectedDevice: string;
+
+	let activePage = 0;
+
+	// Keep activePage in sync when device changes or when the hardware navigates.
+	$: if (device) invoke<number>("get_active_page", { device: device.id }).then(p => activePage = p);
+
+	const unlisten = listen<{ device: string; page: number }>("page_changed", ({ payload }) => {
+		if (payload.device === device.id) activePage = payload.page;
+	});
+	onDestroy(() => unlisten.then(fn => fn()));
+
+	$: pageSize = device.rows * device.columns;
+	$: pageStart = activePage * pageSize;
+	$: touchpointStart = (profile.num_pages ?? 1) * pageSize;
 
 	function handleDragStart({ dataTransfer }: DragEvent, controller: string, position: number) {
 		if (!dataTransfer) return;
@@ -73,6 +89,30 @@
 		} catch (error: any) {
 			notify(String(error));
 		}
+	}
+
+	async function handleAddPage() {
+		try {
+			const newCount = await invoke<number>("add_page", { device: device.id });
+			profile = { ...profile, num_pages: newCount };
+		} catch (error: any) {
+			notify(String(error));
+		}
+	}
+
+	async function handleRemoveLastPage() {
+		try {
+			const newCount = await invoke<number>("remove_last_page", { device: device.id });
+			profile = { ...profile, num_pages: newCount };
+			if (activePage >= newCount) activePage = newCount - 1;
+		} catch (error: any) {
+			notify(String(error));
+		}
+	}
+
+	async function handleSetActivePage(page: number) {
+		await invoke("set_active_page", { device: device.id, page });
+		activePage = page;
 	}
 
 	$: overflowsX = Math.max(device.columns, device.encoders, device.touchpoints) > 8;
@@ -195,12 +235,13 @@
 			{#each { length: device.rows } as _, r}
 				<div class="flex flex-row" role="row">
 					{#each { length: device.columns } as _, c}
+						{@const pos = pageStart + (r * device.columns) + c}
 						<Key
-							context={{ device: device.id, profile: profile.id, controller: "Keypad", position: (r * device.columns) + c }}
-							bind:inslot={profile.keys[(r * device.columns) + c]}
+							context={{ device: device.id, profile: profile.id, controller: "Keypad", position: pos }}
+							bind:inslot={profile.keys[pos]}
 							on:dragover={handleDragOver}
-							on:drop={(event) => handleDrop(event, "Keypad", (r * device.columns) + c)}
-							on:dragstart={(event) => handleDragStart(event, "Keypad", (r * device.columns) + c)}
+							on:drop={(event) => handleDrop(event, "Keypad", pos)}
+							on:dragstart={(event) => handleDragStart(event, "Keypad", pos)}
 							{handlePaste}
 							size={device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
 							label="Key {String.fromCharCode(65 + r)}{c + 1}"
@@ -209,6 +250,30 @@
 					{/each}
 				</div>
 			{/each}
+		</div>
+
+		<div class="flex flex-row items-center justify-center gap-2 py-2">
+			{#each { length: profile.num_pages ?? 1 } as _, i}
+				<button
+					class="w-2.5 h-2.5 rounded-full transition-colors {i === activePage ? 'bg-white' : 'bg-white/30'}"
+					aria-label="Page {i + 1}"
+					on:click={() => handleSetActivePage(i)}
+				/>
+			{/each}
+			<button
+				class="ml-2 w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
+				aria-label="Add page"
+				title="Add page"
+				on:click={handleAddPage}
+			>+</button>
+			{#if (profile.num_pages ?? 1) > 1}
+				<button
+					class="w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
+					aria-label="Remove last page"
+					title="Remove last page"
+					on:click={handleRemoveLastPage}
+				>−</button>
+			{/if}
 		</div>
 
 		<div class="flex flex-row" role="row">
@@ -229,12 +294,13 @@
 
 		<div class="flex flex-row" role="row">
 			{#each { length: device.touchpoints } as _, i}
+				{@const pos = touchpointStart + i}
 				<Key
-					context={{ device: device.id, profile: profile.id, controller: "Keypad", position: (device.rows * device.columns) + i }}
-					bind:inslot={profile.keys[(device.rows * device.columns) + i]}
+					context={{ device: device.id, profile: profile.id, controller: "Keypad", position: pos }}
+					bind:inslot={profile.keys[pos]}
 					on:dragover={handleDragOver}
-					on:drop={(event) => handleDrop(event, "Keypad", (device.rows * device.columns) + i)}
-					on:dragstart={(event) => handleDragStart(event, "Keypad", (device.rows * device.columns) + i)}
+					on:drop={(event) => handleDrop(event, "Keypad", pos)}
+					on:dragstart={(event) => handleDragStart(event, "Keypad", pos)}
 					{handlePaste}
 					size={device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
 					isTouchPoint

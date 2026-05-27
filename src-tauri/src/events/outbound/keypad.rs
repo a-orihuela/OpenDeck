@@ -1,7 +1,8 @@
 use super::{GenericInstancePayload, send_to_plugin};
 
 use crate::events::frontend::instances::{key_moved, update_state};
-use crate::shared::{ActionContext, Context};
+use crate::events::frontend::pages::change_active_page;
+use crate::shared::{ActionContext, Context, DEVICE_ACTIVE_PAGES, DEVICES};
 use crate::store::profiles::{acquire_locks_mut, get_slot_mut, save_profile};
 
 use std::sync::LazyLock;
@@ -21,6 +22,17 @@ struct KeyEvent {
 	payload: GenericInstancePayload,
 }
 
+/// Map a raw hardware key index to a profile position accounting for the active page.
+fn page_position(device: &str, key: u8) -> u8 {
+	let page = DEVICE_ACTIVE_PAGES.get(device).map(|p| *p).unwrap_or(0);
+	if page == 0 {
+		return key;
+	}
+	let Some(info) = DEVICES.get(device) else { return key };
+	let page_size = info.rows * info.columns;
+	(page * page_size).saturating_add(key)
+}
+
 pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 	let mut locks = acquire_locks_mut().await;
 	let selected_profile = locks.device_stores.get_selected_profile(device)?;
@@ -28,11 +40,37 @@ pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 		device: device.to_owned(),
 		profile: selected_profile.to_owned(),
 		controller: "Keypad".to_owned(),
-		position: key,
+		position: page_position(device, key),
 	};
 
 	let _ = key_moved(crate::APP_HANDLE.get().unwrap(), context.clone(), true).await;
 	KEY_DOWN_TARGETS.insert((device.to_owned(), key), context.clone());
+
+	// Extract the action UUID without holding a borrow on locks, so page-navigation
+	// actions can call change_active_page (which also needs &mut locks) freely.
+	let action_uuid = {
+		get_slot_mut(&context, &mut locks)
+			.await?
+			.as_ref()
+			.map(|inst| inst.action.uuid.clone())
+	};
+	let Some(action_uuid) = action_uuid else { return Ok(()) };
+
+	if action_uuid == "opendeck.nextpage" || action_uuid == "opendeck.previouspage" {
+		let num_pages = {
+			let device_info = DEVICES.get(device).ok_or_else(|| anyhow::anyhow!("device not found"))?;
+			locks.profile_stores.get_profile_store(&device_info, &context.profile)?.value.num_pages
+		};
+		let current_page = DEVICE_ACTIVE_PAGES.get(device).map(|p| *p).unwrap_or(0);
+		let new_page = if action_uuid == "opendeck.nextpage" {
+			(current_page + 1) % num_pages
+		} else {
+			(current_page + num_pages - 1) % num_pages
+		};
+		let app = crate::APP_HANDLE.get().unwrap();
+		change_active_page(device, new_page, &mut locks, app).await?;
+		return Ok(());
+	}
 
 	let Some(instance) = get_slot_mut(&context, &mut locks).await? else { return Ok(()) };
 	if instance.action.uuid == "opendeck.multiaction" {
@@ -117,7 +155,7 @@ pub async fn key_up(device: &str, key: u8) -> Result<(), anyhow::Error> {
 		device: device.to_owned(),
 		profile: selected_profile.to_owned(),
 		controller: "Keypad".to_owned(),
-		position: key,
+		position: page_position(device, key),
 	};
 
 	let _ = key_moved(crate::APP_HANDLE.get().unwrap(), context.clone(), false).await;
