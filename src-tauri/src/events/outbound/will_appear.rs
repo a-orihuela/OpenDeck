@@ -42,8 +42,19 @@ pub async fn will_disappear(instance: &ActionInstance, clear_on_device: bool) ->
 	)
 	.await?;
 
-	if clear_on_device && let Err(error) = crate::events::outbound::devices::update_image((&instance.context).into(), None).await {
-		log::warn!("Failed to clear device image: {}", error);
+	if clear_on_device {
+		let mut context: crate::shared::Context = (&instance.context).into();
+		if context.controller == "Keypad" {
+			if let Some(device_info) = crate::shared::DEVICES.get(&context.device) {
+				let page_size = (device_info.rows * device_info.columns) as usize;
+				if page_size > 0 {
+					context.position = (context.position as usize % page_size) as u8;
+				}
+			}
+		}
+		if let Err(error) = crate::events::outbound::devices::update_image(context, None).await {
+			log::warn!("Failed to clear device image: {}", error);
+		}
 	}
 
 	Ok(())
