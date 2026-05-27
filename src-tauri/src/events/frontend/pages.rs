@@ -58,7 +58,7 @@ pub async fn change_active_page(device: &str, new_page: u8, locks: &mut LocksMut
 	Ok(())
 }
 
-async fn fire_will_disappear(instance: &ActionInstance) {
+pub async fn fire_will_disappear(instance: &ActionInstance) {
 	if !matches!(instance.action.uuid.as_str(), "opendeck.multiaction" | "opendeck.toggleaction") {
 		let _ = crate::events::outbound::will_appear::will_disappear(instance, true).await;
 	} else if let Some(children) = &instance.children {
@@ -68,7 +68,7 @@ async fn fire_will_disappear(instance: &ActionInstance) {
 	}
 }
 
-async fn fire_will_appear(instance: &ActionInstance) {
+pub async fn fire_will_appear(instance: &ActionInstance) {
 	if !matches!(instance.action.uuid.as_str(), "opendeck.multiaction" | "opendeck.toggleaction") {
 		let _ = crate::events::outbound::will_appear::will_appear(instance).await;
 	} else if let Some(children) = &instance.children {

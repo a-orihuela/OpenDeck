@@ -120,6 +120,8 @@ async fn main() {
 			frontend::instances::set_state,
 			frontend::instances::update_image,
 			frontend::instances::trigger_virtual_press,
+			frontend::folders::enter_folder,
+			frontend::folders::exit_folder,
 			frontend::pages::get_active_page,
 			frontend::pages::set_active_page,
 			frontend::pages::add_page,

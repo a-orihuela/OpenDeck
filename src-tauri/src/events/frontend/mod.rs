@@ -1,3 +1,4 @@
+pub mod folders;
 pub mod instances;
 pub mod pages;
 pub mod plugins;

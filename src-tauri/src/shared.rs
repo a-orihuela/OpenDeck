@@ -54,6 +54,9 @@ pub fn has_capability(uuid: &str, capability: &str) -> bool {
 /// Per-plugin crash counts and the start of the current crash window, used by the plugin supervisor.
 pub static PLUGIN_CRASH_COUNTS: LazyLock<DashMap<String, (u8, std::time::Instant)>> = LazyLock::new(DashMap::new);
 
+/// When a folder is open, maps device_id → ActionContext of the open folder instance.
+pub static DEVICE_ACTIVE_FOLDER: LazyLock<DashMap<String, ActionContext>> = LazyLock::new(DashMap::new);
+
 /// Active page index per device (runtime state, not persisted).
 pub static DEVICE_ACTIVE_PAGES: LazyLock<DashMap<String, u8>> = LazyLock::new(DashMap::new);
 
@@ -332,6 +335,8 @@ pub struct ActionInstance {
 	#[specta(type = specta_typescript::Any)]
 	pub settings: serde_json::Value,
 	pub children: Option<Vec<ActionInstance>>,
+	#[serde(default)]
+	pub folder_slots: Option<Vec<Option<ActionInstance>>>,
 }
 
 #[serde_inline_default]
@@ -408,6 +413,19 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 						"tooltip": "Go to the previous page",
 						"controllers": [ "Keypad" ],
 						"states": [ { "image": "opendeck/previous-page.svg" } ],
+						"supported_in_multi_actions": false
+					}
+				))
+				.unwrap(),
+				serde_json::from_value(serde_json::json!(
+					{
+						"name": "Folder",
+						"icon": "opendeck/folder.svg",
+						"plugin": "opendeck",
+						"uuid": "opendeck.folder",
+						"tooltip": "Open a folder of actions",
+						"controllers": [ "Keypad" ],
+						"states": [ { "image": "opendeck/folder.svg" } ],
 						"supported_in_multi_actions": false
 					}
 				))

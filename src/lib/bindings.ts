@@ -22,6 +22,7 @@ export type ActionInstance = {
 	current_state: number,
 	settings: any,
 	children: ActionInstance[] | null,
+	folder_slots: (ActionInstance | null)[] | null,
 };
 
 /**  A state of an action. */
