@@ -378,6 +378,14 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 					}
 				))
 				.unwrap(),
+			],
+		},
+	);
+	hashmap.insert(
+		"Navigation".to_owned(),
+		Category {
+			icon: None,
+			actions: vec![
 				serde_json::from_value(serde_json::json!(
 					{
 						"name": "Next Page",
