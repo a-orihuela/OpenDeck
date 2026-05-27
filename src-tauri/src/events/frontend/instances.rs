@@ -221,9 +221,48 @@ pub async fn set_state(context: ActionContext, index: u16, state: ActionState) -
 }
 
 #[command]
-pub async fn update_image(context: Context, image: Option<String>) {
+pub async fn update_image(mut context: Context, image: Option<String>) {
 	if Some(&context.profile) != crate::store::profiles::DEVICE_STORES.write().await.get_selected_profile(&context.device).ok().as_ref() {
 		return;
+	}
+
+	// Translate the page-aware flat profile position to the physical device position.
+	// The frontend encodes keypad positions as: active_page * page_size + physical_key.
+	// For devices with touchpoints, the touchpoint at index i is at num_pages * page_size + i,
+	// which maps to the physical position page_size + i.
+	if context.controller == "Keypad" {
+		if let Some(device_info) = crate::shared::DEVICES.get(&context.device) {
+			let page_size = (device_info.rows * device_info.columns) as usize;
+			if page_size > 0 {
+				let flat = context.position as usize;
+				let current_page = crate::shared::DEVICE_ACTIVE_PAGES.get(&context.device).map(|p| *p as usize).unwrap_or(0);
+
+				if device_info.touchpoints > 0 {
+					let num_pages = {
+						let profile_stores = crate::store::profiles::PROFILE_STORES.read().await;
+						profile_stores
+							.get_profile_store(&device_info, &context.profile)
+							.map(|s| s.value.num_pages as usize)
+							.unwrap_or(1)
+					};
+					let touchpoint_start = num_pages * page_size;
+					if flat >= touchpoint_start {
+						// Touchpoint: physical position is page_size + touchpoint_index
+						context.position = (page_size + flat - touchpoint_start) as u8;
+					} else {
+						if flat / page_size != current_page {
+							return;
+						}
+						context.position = (flat % page_size) as u8;
+					}
+				} else {
+					if flat / page_size != current_page {
+						return;
+					}
+					context.position = (flat % page_size) as u8;
+				}
+			}
+		}
 	}
 
 	if let Err(error) = crate::events::outbound::devices::update_image(context, image).await {
