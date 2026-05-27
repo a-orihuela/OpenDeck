@@ -62,6 +62,13 @@ pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 	};
 	let Some(action_uuid) = action_uuid else { return Ok(()) };
 
+	if action_uuid == "opendeck.folder" {
+		let folder_context = ActionContext::from_context(context, 0);
+		let app = crate::APP_HANDLE.get().unwrap();
+		crate::events::frontend::folders::enter_folder_internal(device, folder_context, app).await?;
+		return Ok(());
+	}
+
 	if action_uuid == "opendeck.nextpage" || action_uuid == "opendeck.previouspage" {
 		let num_pages = {
 			let device_info = DEVICES.get(device).ok_or_else(|| anyhow::anyhow!("device not found"))?;

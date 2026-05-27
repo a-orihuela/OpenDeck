@@ -61,6 +61,10 @@
 			$inspectedInstance = context;
 			return;
 		}
+		if (slot.action.uuid == "opendeck.folder" && context) {
+			invoke("enter_folder", { device: context.device, folderContext: slot.context });
+			return;
+		}
 		if (slot.action.uuid == "opendeck.multiaction" || slot.action.uuid == "opendeck.toggleaction") {
 			$inspectedParentAction = context;
 		} else {

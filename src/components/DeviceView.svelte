@@ -195,14 +195,6 @@
 		}
 	}
 
-	async function handleEnterFolder(folderCtx: string) {
-		try {
-			await invoke("enter_folder", { device: device.id, folderContext: folderCtx });
-		} catch (error: any) {
-			notify(String(error));
-		}
-	}
-
 	$: overflowsX = Math.max(device.columns, device.encoders, device.touchpoints) > 8;
 	$: overflowsY = (device.rows + Math.min(device.encoders, 1) + Math.min(device.touchpoints, 1)) > 4;
 
@@ -378,14 +370,6 @@
 								size={device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
 								label="Key {String.fromCharCode(65 + r)}{c + 1}"
 								tabindex={focusedRow === r && focusedCol === c ? 0 : -1}
-								on:click={(e) => {
-									// Open folder on click if the slot is a folder action.
-									const slot = profile.keys[pos];
-									if (slot?.action.uuid === 'opendeck.folder') {
-										e.stopPropagation();
-										handleEnterFolder(slot.context);
-									}
-								}}
 							/>
 						{/each}
 					</div>
