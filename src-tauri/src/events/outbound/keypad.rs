@@ -63,9 +63,14 @@ pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 	let Some(action_uuid) = action_uuid else { return Ok(()) };
 
 	if action_uuid == "opendeck.folder" {
+		// Drop write locks before calling enter_folder_internal — it acquires its own locks
+		// internally, and holding them here would cause a write-lock re-entrance deadlock.
+		drop(locks);
 		let folder_context = ActionContext::from_context(context, 0);
 		let app = crate::APP_HANDLE.get().unwrap();
 		crate::events::frontend::folders::enter_folder_internal(device, folder_context, app).await?;
+		// Remove the key_down target so the matching key_up doesn't fire a folder-slot action.
+		KEY_DOWN_TARGETS.remove(&(device.to_owned(), key));
 		return Ok(());
 	}
 
@@ -171,20 +176,20 @@ async fn folder_key_down(device: &str, key: u8, folder_ctx: ActionContext) -> Re
 		return Ok(());
 	}
 
-	let mut locks = acquire_locks_mut().await;
-	let selected_profile = locks.device_stores.get_selected_profile(device)?;
-	let virtual_context = Context {
-		device: device.to_owned(),
-		profile: selected_profile.to_owned(),
-		controller: "Keypad".to_owned(),
-		position: key,
-	};
-
-	let _ = key_moved(crate::APP_HANDLE.get().unwrap(), virtual_context.clone(), true).await;
-	KEY_DOWN_TARGETS.insert((device.to_owned(), key), virtual_context);
-
-	let folder_slot_ctx: Context = (&folder_ctx).into();
 	let child = {
+		let mut locks = acquire_locks_mut().await;
+		let selected_profile = locks.device_stores.get_selected_profile(device)?;
+		let virtual_context = Context {
+			device: device.to_owned(),
+			profile: selected_profile.to_owned(),
+			controller: "Keypad".to_owned(),
+			position: key,
+		};
+
+		let _ = key_moved(crate::APP_HANDLE.get().unwrap(), virtual_context.clone(), true).await;
+		KEY_DOWN_TARGETS.insert((device.to_owned(), key), virtual_context);
+
+		let folder_slot_ctx: Context = (&folder_ctx).into();
 		let slot = get_slot_mut(&folder_slot_ctx, &mut locks).await?;
 		slot.as_ref().and_then(|inst| inst.folder_slots.as_ref())
 			.and_then(|slots| slots.get(key as usize))
@@ -277,49 +282,54 @@ pub async fn key_up(device: &str, key: u8) -> Result<(), anyhow::Error> {
 }
 
 async fn folder_key_up(device: &str, key: u8, folder_ctx: ActionContext) -> Result<(), anyhow::Error> {
-	let mut locks = acquire_locks_mut().await;
-	let selected_profile = locks.device_stores.get_selected_profile(device)?;
-	let virtual_context = Context {
-		device: device.to_owned(),
-		profile: selected_profile.to_owned(),
-		controller: "Keypad".to_owned(),
-		position: key,
-	};
-
-	let _ = key_moved(crate::APP_HANDLE.get().unwrap(), virtual_context.clone(), false).await;
-	let Some((_, expected)) = KEY_DOWN_TARGETS.remove(&(device.to_owned(), key)) else {
-		return Ok(());
-	};
-	if virtual_context != expected {
-		return Ok(());
-	}
-
 	let folder_slot_ctx: Context = (&folder_ctx).into();
 
-	// Clone the child to work with outside the borrow.
+	// All lock-holding work is scoped here; locks are released before send_to_plugin.
 	let child = {
-		let slot = get_slot_mut(&folder_slot_ctx, &mut locks).await?;
-		slot.as_ref().and_then(|inst| inst.folder_slots.as_ref())
-			.and_then(|slots| slots.get(key as usize))
-			.and_then(|s| s.as_ref())
-			.cloned()
-	};
+		let mut locks = acquire_locks_mut().await;
+		let selected_profile = locks.device_stores.get_selected_profile(device)?;
+		let virtual_context = Context {
+			device: device.to_owned(),
+			profile: selected_profile.to_owned(),
+			controller: "Keypad".to_owned(),
+			position: key,
+		};
 
-	let Some(mut child) = child else { return Ok(()) };
+		let _ = key_moved(crate::APP_HANDLE.get().unwrap(), virtual_context.clone(), false).await;
+		let Some((_, expected)) = KEY_DOWN_TARGETS.remove(&(device.to_owned(), key)) else {
+			return Ok(());
+		};
+		if virtual_context != expected {
+			return Ok(());
+		}
 
-	// Advance automatic two-state toggle.
-	if child.states.len() == 2 && !child.action.disable_automatic_states {
-		let new_state = (child.current_state + 1) % (child.states.len() as u16);
-		child.current_state = new_state;
-		let slot = get_slot_mut(&folder_slot_ctx, &mut locks).await?;
-		if let Some(inst) = slot {
-			if let Some(slots) = inst.folder_slots.as_mut() {
-				if let Some(Some(child_ref)) = slots.get_mut(key as usize) {
-					child_ref.current_state = new_state;
+		let child = {
+			let slot = get_slot_mut(&folder_slot_ctx, &mut locks).await?;
+			slot.as_ref().and_then(|inst| inst.folder_slots.as_ref())
+				.and_then(|slots| slots.get(key as usize))
+				.and_then(|s| s.as_ref())
+				.cloned()
+		};
+
+		let Some(mut child) = child else { return Ok(()) };
+
+		// Advance automatic two-state toggle.
+		if child.states.len() == 2 && !child.action.disable_automatic_states {
+			let new_state = (child.current_state + 1) % (child.states.len() as u16);
+			child.current_state = new_state;
+			let slot = get_slot_mut(&folder_slot_ctx, &mut locks).await?;
+			if let Some(inst) = slot {
+				if let Some(slots) = inst.folder_slots.as_mut() {
+					if let Some(Some(child_ref)) = slots.get_mut(key as usize) {
+						child_ref.current_state = new_state;
+					}
 				}
 			}
 		}
-	}
+
+		save_profile(device, &mut locks).await?;
+		child
+	}; // locks released here — before any plugin communication
 
 	send_to_plugin(
 		&child.action.plugin,
@@ -331,8 +341,6 @@ async fn folder_key_up(device: &str, key: u8, folder_ctx: ActionContext) -> Resu
 			payload: GenericInstancePayload::new(&child),
 		},
 	).await?;
-
-	save_profile(device, &mut locks).await?;
 
 	let app = crate::APP_HANDLE.get().unwrap();
 	let window = app.get_webview_window("main").unwrap();

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ActionInstance, ActionState, Context, DeviceInfo, Profile } from "$lib/bindings";
+	import type { ActionInstance, Context, DeviceInfo, Profile } from "$lib/bindings";
 	import type { CopiedItem } from "$lib/propertyInspector";
 
 	import Key from "./Key.svelte";
@@ -68,7 +68,13 @@
 
 	async function renderCloseIcon(canvas: HTMLCanvasElement) {
 		if (!activeFolderContext || folderClosePosition < 0) return;
-		const closeState: ActionState = {
+		const closeCtx: Context = {
+			device: device.id,
+			profile: profile.id,
+			controller: "Keypad",
+			position: folderClosePosition,
+		};
+		await renderImage(canvas, closeCtx, {
 			image: "opendeck/folder-close.svg",
 			image_scale: 100,
 			background_colour: "#000000",
@@ -76,14 +82,7 @@
 			colour: "#FFFFFF", stroke_colour: "#000000",
 			alignment: "middle", family: "Liberation Sans",
 			style: "Regular", size: 16, stroke_size: 3, underline: false,
-		};
-		const closeCtx: Context = {
-			device: device.id,
-			profile: profile.id,
-			controller: "Keypad",
-			position: folderClosePosition,
-		};
-		await renderImage(canvas, closeCtx, closeState, undefined, false, false, true, true, false);
+		}, undefined, false, false, true, true, false);
 	}
 
 	function handleDragStart({ dataTransfer }: DragEvent, controller: string, position: number) {
@@ -278,21 +277,6 @@
 	}
 </script>
 
-<style>
-	.device-fade-x {
-		mask-image: linear-gradient(to right, transparent, black 7.5rem, black calc(100% - 7.5rem), transparent);
-	}
-	.device-fade-y {
-		mask-image: linear-gradient(to bottom, transparent, black 7.5rem, black calc(100% - 7.5rem), transparent);
-	}
-	.device-fade-xy {
-		mask-image:
-			linear-gradient(to right, transparent, black 7.5rem, black calc(100% - 7.5rem), transparent),
-			linear-gradient(to bottom, transparent, black 7.5rem, black calc(100% - 7.5rem), transparent);
-		mask-composite: intersect;
-	}
-</style>
-
 {#key device}
 	<span id="grid-description" class="sr-only">Use arrow keys to navigate between keys. Moving to a key will display its property inspector.</span>
 	<div
@@ -319,10 +303,11 @@
 						{#each { length: device.columns } as _, c}
 							{@const pos = r * device.columns + c}
 							{#if pos === folderClosePosition}
+								{@const closeSize = device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
 								<!-- Close button: shows red X, clicking exits folder. -->
 								<div
 									class="relative cursor-pointer"
-									style={`transform: scale(${112 / (device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144)});`}
+									style={`transform: scale(${112 / closeSize});`}
 									role="gridcell"
 									aria-label="Close folder"
 									tabindex={focusedRow === r && focusedCol === c ? 0 : -1}
@@ -332,8 +317,9 @@
 									<canvas
 										bind:this={closeCanvas}
 										class="relative border-3 border-red-600 rounded-3xl"
-										width={device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
-										height={device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
+										style={`margin: ${-((closeSize + 6 - 132) / 2)}px;`}
+										width={closeSize}
+										height={closeSize}
 									/>
 								</div>
 							{:else}
@@ -375,31 +361,36 @@
 					</div>
 				{/each}
 			</div>
-
-			<div class="flex flex-row items-center justify-center gap-2 py-2">
-				{#each { length: profile.num_pages ?? 1 } as _, i}
-					<button
-						class="w-2.5 h-2.5 rounded-full transition-colors {i === activePage ? 'bg-white' : 'bg-white/30'}"
-						aria-label="Page {i + 1}"
-						on:click={() => handleSetActivePage(i)}
-					/>
-				{/each}
-				<button
-					class="ml-2 w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
-					aria-label="Add page"
-					title="Add page"
-					on:click={handleAddPage}
-				>+</button>
-				{#if (profile.num_pages ?? 1) > 1}
-					<button
-						class="w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
-						aria-label="Remove last page"
-						title="Remove last page"
-						on:click={handleRemoveLastPage}
-					>−</button>
-				{/if}
-			</div>
 		{/if}
+
+		<!-- Page navigation: always in DOM so layout stays stable; hidden while inside a folder. -->
+		<div
+			class="flex flex-row items-center justify-center gap-2 py-2"
+			class:invisible={!!activeFolderContext}
+			class:pointer-events-none={!!activeFolderContext}
+		>
+			{#each { length: profile.num_pages ?? 1 } as _, i}
+				<button
+					class="w-2.5 h-2.5 rounded-full transition-colors {i === activePage ? 'bg-white' : 'bg-white/30'}"
+					aria-label="Page {i + 1}"
+					on:click={() => handleSetActivePage(i)}
+				/>
+			{/each}
+			<button
+				class="ml-2 w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
+				aria-label="Add page"
+				title="Add page"
+				on:click={handleAddPage}
+			>+</button>
+			{#if (profile.num_pages ?? 1) > 1}
+				<button
+					class="w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
+					aria-label="Remove last page"
+					title="Remove last page"
+					on:click={handleRemoveLastPage}
+				>−</button>
+			{/if}
+		</div>
 
 		<div class="flex flex-row" role="row">
 			{#each { length: device.encoders } as _, i}
