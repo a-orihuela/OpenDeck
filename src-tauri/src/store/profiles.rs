@@ -39,10 +39,20 @@ impl ProfileStores {
 				id: id.to_owned(),
 				keys: Vec::new(),
 				sliders: Vec::new(),
+				num_pages: 1,
 			};
 
 			let mut store = Store::new(&canonical_id, &config_dir().join("profiles"), default).context(format!("Failed to create store for profile {}", canonical_id))?;
-			store.value.keys.resize((device.rows * device.columns + device.touchpoints) as usize, None);
+			let page_slots = (device.rows * device.columns) as usize * store.value.num_pages as usize;
+			let total_keys = page_slots + device.touchpoints as usize;
+			// Grow or shrink the keys array while preserving touchpoints at the end.
+			if store.value.keys.len() != total_keys {
+				let old_tp_start = store.value.keys.len().saturating_sub(device.touchpoints as usize);
+				let tp_data: Vec<_> = store.value.keys.drain(old_tp_start..).collect();
+				store.value.keys.resize(page_slots, None);
+				store.value.keys.extend(tp_data);
+				store.value.keys.resize(total_keys, None);
+			}
 			store.value.sliders.resize(device.encoders as usize, None);
 
 			let categories = crate::shared::CATEGORIES.read().await;
@@ -67,6 +77,39 @@ impl ProfileStores {
 			self.stores.insert(canonical_id.clone(), store);
 			Ok(self.stores.get_mut(&canonical_id).unwrap())
 		}
+	}
+
+	pub async fn add_page(&mut self, device: &DeviceInfo, id: &str) -> Result<u8, anyhow::Error> {
+		let store = self.get_profile_store_mut(device, id).await?;
+		store.value.num_pages = store.value.num_pages.saturating_add(1);
+		let page_slots = (device.rows * device.columns) as usize * store.value.num_pages as usize;
+		let total_keys = page_slots + device.touchpoints as usize;
+		let old_tp_start = store.value.keys.len().saturating_sub(device.touchpoints as usize);
+		let tp_data: Vec<_> = store.value.keys.drain(old_tp_start..).collect();
+		store.value.keys.resize(page_slots, None);
+		store.value.keys.extend(tp_data);
+		store.value.keys.resize(total_keys, None);
+		let num_pages = store.value.num_pages;
+		store.save()?;
+		Ok(num_pages)
+	}
+
+	pub async fn remove_last_page(&mut self, device: &DeviceInfo, id: &str) -> Result<u8, anyhow::Error> {
+		let store = self.get_profile_store_mut(device, id).await?;
+		if store.value.num_pages <= 1 {
+			return Err(anyhow!("profile must have at least one page"));
+		}
+		store.value.num_pages -= 1;
+		let page_slots = (device.rows * device.columns) as usize * store.value.num_pages as usize;
+		let total_keys = page_slots + device.touchpoints as usize;
+		let old_tp_start = store.value.keys.len().saturating_sub(device.touchpoints as usize);
+		let tp_data: Vec<_> = store.value.keys.drain(old_tp_start..).collect();
+		store.value.keys.truncate(page_slots);
+		store.value.keys.extend(tp_data);
+		store.value.keys.resize(total_keys, None);
+		let num_pages = store.value.num_pages;
+		store.save()?;
+		Ok(num_pages)
 	}
 
 	pub fn remove_profile(&mut self, device: &str, id: &str) {

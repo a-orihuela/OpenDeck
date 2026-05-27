@@ -54,6 +54,9 @@ pub fn has_capability(uuid: &str, capability: &str) -> bool {
 /// Per-plugin crash counts and the start of the current crash window, used by the plugin supervisor.
 pub static PLUGIN_CRASH_COUNTS: LazyLock<DashMap<String, (u8, std::time::Instant)>> = LazyLock::new(DashMap::new);
 
+/// Active page index per device (runtime state, not persisted).
+pub static DEVICE_ACTIVE_PAGES: LazyLock<DashMap<String, u8>> = LazyLock::new(DashMap::new);
+
 /// Get the application configuration directory.
 pub fn config_dir() -> std::path::PathBuf {
 	let app_handle = crate::APP_HANDLE.get().unwrap();
@@ -331,11 +334,14 @@ pub struct ActionInstance {
 	pub children: Option<Vec<ActionInstance>>,
 }
 
+#[serde_inline_default]
 #[derive(Clone, Serialize, Deserialize, specta::Type)]
 pub struct Profile {
 	pub id: String,
 	pub keys: Vec<Option<ActionInstance>>,
 	pub sliders: Vec<Option<ActionInstance>>,
+	#[serde_inline_default(1u8)]
+	pub num_pages: u8,
 }
 
 /// A map of category names to a list of actions in that category.
@@ -368,6 +374,32 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 						"tooltip": "Cycle through multiple actions",
 						"controllers": [ "Keypad" ],
 						"states": [ { "image": "opendeck/toggle-action.png" } ],
+						"supported_in_multi_actions": false
+					}
+				))
+				.unwrap(),
+				serde_json::from_value(serde_json::json!(
+					{
+						"name": "Next Page",
+						"icon": "opendeck/next-page.svg",
+						"plugin": "opendeck",
+						"uuid": "opendeck.nextpage",
+						"tooltip": "Go to the next page",
+						"controllers": [ "Keypad" ],
+						"states": [ { "image": "opendeck/next-page.svg" } ],
+						"supported_in_multi_actions": false
+					}
+				))
+				.unwrap(),
+				serde_json::from_value(serde_json::json!(
+					{
+						"name": "Previous Page",
+						"icon": "opendeck/previous-page.svg",
+						"plugin": "opendeck",
+						"uuid": "opendeck.previouspage",
+						"tooltip": "Go to the previous page",
+						"controllers": [ "Keypad" ],
+						"states": [ { "image": "opendeck/previous-page.svg" } ],
 						"supported_in_multi_actions": false
 					}
 				))

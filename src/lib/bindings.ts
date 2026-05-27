@@ -71,6 +71,7 @@ export type Profile = {
 	id: string,
 	keys: (ActionInstance | null)[],
 	sliders: (ActionInstance | null)[],
+	num_pages: number,
 };
 
 export type Settings = {

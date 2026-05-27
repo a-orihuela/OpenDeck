@@ -190,13 +190,18 @@ impl DiskActionInstance {
 pub struct DiskProfile {
 	pub keys: Vec<Option<DiskActionInstance>>,
 	pub sliders: Vec<Option<DiskActionInstance>>,
+	#[serde(default = "default_num_pages")]
+	pub num_pages: u8,
 }
+
+fn default_num_pages() -> u8 { 1 }
 
 impl From<&Profile> for DiskProfile {
 	fn from(value: &Profile) -> Self {
 		Self {
 			keys: value.keys.clone().into_iter().map(|x| x.map(|v| v.into())).collect(),
 			sliders: value.sliders.clone().into_iter().map(|x| x.map(|v| v.into())).collect(),
+			num_pages: value.num_pages,
 		}
 	}
 }
@@ -212,6 +217,7 @@ impl DiskProfile {
 			id,
 			keys: self.keys.into_iter().map(|x| x.map(|v| v.into_action_instance(path))).collect(),
 			sliders: self.sliders.into_iter().map(|x| x.map(|v| v.into_action_instance(path))).collect(),
+			num_pages: self.num_pages,
 		}
 	}
 }
