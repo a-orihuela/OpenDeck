@@ -10,6 +10,10 @@
 
 	import { invoke } from "@tauri-apps/api/core";
 
+	import { inFolderMode } from "$lib/singletons";
+
+	const FOLDER_FORBIDDEN_ACTIONS = new Set(["opendeck.nextpage", "opendeck.previouspage", "opendeck.folder"]);
+
 	let categories: { [name: string]: { icon?: string; actions: Action[] } } = {};
 	let plugins: any[] = [];
 	export async function reload() {
@@ -25,6 +29,9 @@
 		filteredCategories = Object.entries(categories)
 			.sort((a, b) => a[0] == PRODUCT_NAME ? -1 : b[0] == PRODUCT_NAME ? 1 : a[0].localeCompare(b[0]))
 			.map(([categoryName, { icon, actions }]): [string, { icon?: string; actions: Action[] }] => {
+				if ($inFolderMode) {
+					actions = actions.filter((action) => !FOLDER_FORBIDDEN_ACTIONS.has(action.uuid));
+				}
 				if (!categoryName.toLowerCase().includes(lowerCaseQuery)) {
 					actions = actions.filter((action) => action.name.toLowerCase().includes(lowerCaseQuery));
 				}

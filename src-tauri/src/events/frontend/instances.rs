@@ -1,6 +1,6 @@
 use super::Error;
 
-use crate::shared::{Action, ActionContext, ActionInstance, ActionState, Context, config_dir};
+use crate::shared::{Action, ActionContext, ActionInstance, ActionState, Context, DEVICE_ACTIVE_FOLDER, config_dir};
 use crate::store::profiles::{LocksMut, acquire_locks, acquire_locks_mut, get_instance_mut, get_slot, get_slot_mut, save_profile};
 
 use tauri::{AppHandle, Emitter, Manager, command};
@@ -8,6 +8,18 @@ use tokio::fs::remove_dir_all;
 
 #[command]
 pub async fn create_instance(app: AppHandle, action: Action, context: Context) -> Result<Option<ActionInstance>, Error> {
+	// In folder mode: route keypad drops to the open folder's child slots.
+	if context.controller == "Keypad" {
+		if let Some(folder_ctx) = DEVICE_ACTIVE_FOLDER.get(&context.device).map(|r| r.clone()) {
+			return crate::events::frontend::folders::create_folder_child_impl(
+				&context.device,
+				folder_ctx,
+				context.position as usize,
+				action,
+			).await;
+		}
+	}
+
 	if !action.controllers.contains(&context.controller) {
 		return Ok(None);
 	}
@@ -29,6 +41,7 @@ pub async fn create_instance(app: AppHandle, action: Action, context: Context) -
 			current_state: 0,
 			settings: serde_json::Value::Object(serde_json::Map::new()),
 			children: None,
+			folder_slots: None,
 		};
 		children.push(instance.clone());
 
@@ -48,6 +61,15 @@ pub async fn create_instance(app: AppHandle, action: Action, context: Context) -
 		let slot = get_slot(&context, &locks).await?.clone();
 		Ok(slot)
 	} else {
+		let folder_slots = if action.uuid == "opendeck.folder" {
+			let page_size = crate::shared::DEVICES.get(&context.device)
+				.map(|d| (d.rows * d.columns) as usize)
+				.unwrap_or(15);
+			Some(vec![None; page_size])
+		} else {
+			None
+		};
+
 		let instance = ActionInstance {
 			action: action.clone(),
 			context: ActionContext::from_context(context.clone(), 0),
@@ -59,6 +81,7 @@ pub async fn create_instance(app: AppHandle, action: Action, context: Context) -
 			} else {
 				None
 			},
+			folder_slots,
 		};
 
 		*slot = Some(instance.clone());
@@ -149,6 +172,17 @@ pub async fn move_instance(source: Context, destination: Context, retain: bool) 
 
 #[command]
 pub async fn remove_instance(context: ActionContext) -> Result<(), Error> {
+	// In folder mode: route keypad removes to the open folder's child slots.
+	if context.controller == "Keypad" {
+		if let Some(folder_ctx) = DEVICE_ACTIVE_FOLDER.get(&context.device).map(|r| r.clone()) {
+			return crate::events::frontend::folders::remove_folder_child_impl(
+				&context.device,
+				folder_ctx,
+				context.position as usize,
+			).await;
+		}
+	}
+
 	let mut locks = acquire_locks_mut().await;
 	let slot = get_slot_mut(&(&context).into(), &mut locks).await?;
 	let Some(instance) = slot else {
@@ -234,32 +268,34 @@ pub async fn update_image(mut context: Context, image: Option<String>) {
 		if let Some(device_info) = crate::shared::DEVICES.get(&context.device) {
 			let page_size = (device_info.rows * device_info.columns) as usize;
 			if page_size > 0 {
-				let flat = context.position as usize;
-				let current_page = crate::shared::DEVICE_ACTIVE_PAGES.get(&context.device).map(|p| *p as usize).unwrap_or(0);
+				// In folder mode: positions are already physical (0..page_size-1); skip translation.
+				if !DEVICE_ACTIVE_FOLDER.contains_key(&context.device) {
+					let flat = context.position as usize;
+					let current_page = crate::shared::DEVICE_ACTIVE_PAGES.get(&context.device).map(|p| *p as usize).unwrap_or(0);
 
-				if device_info.touchpoints > 0 {
-					let num_pages = {
-						let profile_stores = crate::store::profiles::PROFILE_STORES.read().await;
-						profile_stores
-							.get_profile_store(&device_info, &context.profile)
-							.map(|s| s.value.num_pages as usize)
-							.unwrap_or(1)
-					};
-					let touchpoint_start = num_pages * page_size;
-					if flat >= touchpoint_start {
-						// Touchpoint: physical position is page_size + touchpoint_index
-						context.position = (page_size + flat - touchpoint_start) as u8;
+					if device_info.touchpoints > 0 {
+						let num_pages = {
+							let profile_stores = crate::store::profiles::PROFILE_STORES.read().await;
+							profile_stores
+								.get_profile_store(&device_info, &context.profile)
+								.map(|s| s.value.num_pages as usize)
+								.unwrap_or(1)
+						};
+						let touchpoint_start = num_pages * page_size;
+						if flat >= touchpoint_start {
+							context.position = (page_size + flat - touchpoint_start) as u8;
+						} else {
+							if flat / page_size != current_page {
+								return;
+							}
+							context.position = (flat % page_size) as u8;
+						}
 					} else {
 						if flat / page_size != current_page {
 							return;
 						}
 						context.position = (flat % page_size) as u8;
 					}
-				} else {
-					if flat / page_size != current_page {
-						return;
-					}
-					context.position = (flat % page_size) as u8;
 				}
 			}
 		}

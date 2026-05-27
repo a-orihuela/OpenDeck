@@ -68,6 +68,8 @@ pub struct DiskActionInstance {
 	pub current_state: u16,
 	pub settings: serde_json::Value,
 	pub children: Option<Vec<DiskActionInstance>>,
+	#[serde(default)]
+	pub folder_slots: Option<Vec<Option<DiskActionInstance>>>,
 }
 
 impl From<ActionInstance> for DiskActionInstance {
@@ -133,6 +135,9 @@ impl From<ActionInstance> for DiskActionInstance {
 			current_state: value.current_state,
 			settings: value.settings,
 			children: value.children.map(|c| c.into_iter().map(|v| v.into()).collect()),
+			folder_slots: value.folder_slots.map(|slots| {
+				slots.into_iter().map(|s| s.map(|v| v.into())).collect()
+			}),
 		}
 	}
 }
@@ -182,6 +187,9 @@ impl DiskActionInstance {
 			current_state: self.current_state,
 			settings: self.settings,
 			children: self.children.map(|c| c.into_iter().map(|v| v.into_action_instance(path)).collect()),
+			folder_slots: self.folder_slots.map(|slots| {
+				slots.into_iter().map(|s| s.map(|v| v.into_action_instance(path))).collect()
+			}),
 		}
 	}
 }
