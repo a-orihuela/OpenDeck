@@ -8,7 +8,7 @@
 	import { localisations } from "$lib/settings";
 	import { PRODUCT_NAME } from "$lib/singletons";
 
-	import { invoke } from "@tauri-apps/api/core";
+	import { getCategories, listPlugins } from "$lib/api/commands";
 
 	import { inFolderMode } from "$lib/singletons";
 
@@ -17,8 +17,8 @@
 	let categories: { [name: string]: { icon?: string; actions: Action[] } } = {};
 	let plugins: any[] = [];
 	export async function reload() {
-		categories = await invoke("get_categories");
-		plugins = await invoke("list_plugins");
+		categories = await getCategories();
+		plugins = await listPlugins();
 	}
 	reload();
 

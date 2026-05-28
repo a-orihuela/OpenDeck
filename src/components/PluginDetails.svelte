@@ -5,7 +5,8 @@
 
 	import "$lib/shims.ts";
 
-	import { invoke } from "@tauri-apps/api/core";
+	import { openUrl } from "$lib/api/commands";
+	import { fetchPluginReadme, fetchTotalDownloadCount } from "$lib/services/pluginService";
 	import DOMPurify from "dompurify";
 	import { marked } from "marked";
 	import markedAlert from "marked-alert";
@@ -20,33 +21,6 @@
 	export let install: () => void;
 	export let close: () => void;
 
-	// @ts-expect-error
-	const fetch = window.fetchNative ?? window.fetch;
-
-	async function getReadme(repo: string): Promise<string> {
-		const renderer = new marked.Renderer();
-		renderer.link = function (token) {
-			const rendered = marked.Renderer.prototype.link.call(this, token);
-			return rendered.replace("<a", `<a target="_blank" `);
-		};
-		marked.use({ renderer });
-		const urls = [
-			"https://raw.githubusercontent.com/" + repo + "/main/README.md",
-			"https://raw.githubusercontent.com/" + repo + "/main/readme.md",
-			"https://raw.githubusercontent.com/" + repo + "/master/README.md",
-			"https://raw.githubusercontent.com/" + repo + "/master/readme.md",
-		];
-		for (const url of urls) {
-			const response = await fetch(url);
-			if (response.ok) {
-				marked.use(markedAlert());
-				marked.use(baseUrl(url));
-				return await marked.parse(DOMPurify.sanitize(await response.text()).replace(/<a/g, '<a target="_blank" '));
-			}
-		}
-		return await marked.parse("**Plugin README file not found**\n\n[View plugin on GitHub](https://github.com/" + repo + ")");
-	}
-
 	function handleReadmeClick(event: MouseEvent | KeyboardEvent) {
 		const link = (event.target as HTMLElement).closest("a");
 		if (link && link.href) {
@@ -58,15 +32,22 @@
 	onMount(async () => {
 		const repo = details.repository.split("/")[3] + "/" + details.repository.split("/")[4];
 
-		readme = await getReadme(repo);
+		const renderer = new marked.Renderer();
+		renderer.link = function (token) {
+			return marked.Renderer.prototype.link.call(this, token).replace("<a", `<a target="_blank" `);
+		};
+		marked.use({ renderer });
 
-		const releasesResponse = await fetch("https://api.github.com/repos/" + repo + "/releases");
-		const releases = await releasesResponse.json();
-		for (const release of releases) {
-			for (const asset of release.assets) {
-				downloadCount += asset.download_count;
-			}
+		const result = await fetchPluginReadme(repo);
+		if (result) {
+			marked.use(markedAlert());
+			marked.use(baseUrl(result.baseUrl));
+			readme = await marked.parse(DOMPurify.sanitize(result.markdown).replace(/<a/g, '<a target="_blank" '));
+		} else {
+			readme = await marked.parse(`**Plugin README file not found**\n\n[View plugin on GitHub](https://github.com/${repo})`);
 		}
+
+		downloadCount = await fetchTotalDownloadCount(repo);
 	});
 </script>
 
@@ -109,7 +90,7 @@
 				</button>
 
 				<button
-					on:click={() => invoke("open_url", { url: details.download_url ?? details.repository + "/releases/latest" })}
+					on:click={() => openUrl(details.download_url ?? details.repository + "/releases/latest")}
 					class="ml-1 p-3.5 active:translate-y-0.5 text-lg text-neutral-100 bg-indigo-600 hover:bg-indigo-500 transition-colors border border-indigo-500 rounded-r-lg"
 					aria-label="Download latest release from GitHub"
 				>

@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "./api/commands.ts";
 
 globalThis.open = (url?: string | URL) => {
-	if (url) invoke("open_url", { url });
+	if (url) openUrl(String(url));
 	return null;
 };

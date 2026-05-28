@@ -3,8 +3,8 @@
 
 	import { profileManager } from "$lib/singletons";
 
-	import { invoke } from "@tauri-apps/api/core";
-	import { listen } from "@tauri-apps/api/event";
+	import { getBuildInfo, getDevices, getSelectedProfile, setSelectedProfile } from "$lib/api/commands";
+	import { onDevices, onSwitchProfile } from "$lib/api/events";
 	import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 
 	export let devices: { [id: string]: DeviceInfo } = {};
@@ -17,9 +17,9 @@
 		for (const [id, device] of Object.entries(devices)) {
 			if (!registered.includes(id)) {
 				(async () => {
-					let profile: Profile = await invoke("get_selected_profile", { device: device.id });
+					let profile: Profile = await getSelectedProfile(device.id);
 					selectedProfiles[id] = profile;
-					await invoke("set_selected_profile", { device: id, id: profile.id });
+					await setSelectedProfile(id, profile.id);
 				})();
 				registered.push(id);
 			}
@@ -30,20 +30,20 @@
 		registered = [];
 	}
 
-	listen("switch_profile", async ({ payload }: { payload: { device: string; profile: string } }) => {
-		if (payload.device == value) {
-			$profileManager?.setProfile(payload.profile);
+	onSwitchProfile(async (device, profile) => {
+		if (device == value) {
+			$profileManager?.setProfile(profile);
 		} else {
-			await invoke("set_selected_profile", { device: payload.device, id: payload.profile });
-			selectedProfiles[payload.device] = await invoke("get_selected_profile", { device: payload.device });
+			await setSelectedProfile(device, profile);
+			selectedProfiles[device] = await getSelectedProfile(device);
 		}
 	});
 
-	(async () => devices = await invoke("get_devices"))();
-	listen("devices", ({ payload }: { payload: { [id: string]: DeviceInfo } }) => devices = payload);
+	(async () => devices = await getDevices())();
+	onDevices((payload) => devices = payload);
 
 	let buildInfo: string;
-	(async () => buildInfo = await invoke("get_build_info"))();
+	(async () => buildInfo = await getBuildInfo())();
 	const window = getCurrentWindow();
 
 	$: {

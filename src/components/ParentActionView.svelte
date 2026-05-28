@@ -6,7 +6,7 @@
 
 	import { copiedItem, inspectedInstance, inspectedParentAction } from "$lib/propertyInspector";
 
-	import { invoke } from "@tauri-apps/api/core";
+	import { createInstance, removeInstance as apiRemoveInstance } from "$lib/api/commands";
 	import { onMount, tick } from "svelte";
 
 	export let profile: Profile;
@@ -37,7 +37,7 @@
 		) {
 			return;
 		}
-		let response: ActionInstance | null = await invoke("create_instance", { context: $inspectedParentAction, action });
+		let response: ActionInstance | null = await createInstance($inspectedParentAction!, action);
 		if (response) profile.keys[$inspectedParentAction!.position] = response;
 	}
 
@@ -54,7 +54,7 @@
 	}
 
 	async function removeInstance(index: number, refocus = false) {
-		await invoke("remove_instance", { context: children[index].context });
+		await apiRemoveInstance(children[index].context);
 		children.splice(index, 1);
 		profile.keys[$inspectedParentAction!.position]!.children = children;
 

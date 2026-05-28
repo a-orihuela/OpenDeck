@@ -3,7 +3,7 @@
 
 	import { renderImage, resizeImage } from "$lib/rendererHelper";
 
-	import { invoke } from "@tauri-apps/api/core";
+	import { getFonts, setState } from "$lib/api/commands";
 	import { onMount } from "svelte";
 
 	export let instance: ActionInstance;
@@ -15,7 +15,7 @@
 
 	let fonts: string[] = [];
 	onMount(async () => {
-		fonts = await invoke("get_fonts");
+		fonts = await getFonts();
 	});
 
 	let fileInput: HTMLInputElement;
@@ -51,7 +51,7 @@
 		italic = instance.states[state].style.includes("Italic");
 	}
 	$: update(instance);
-	$: invoke("set_state", { context: instance.context, index: state, state: instance.states[state] });
+	$: setState(instance.context, state, instance.states[state]);
 </script>
 
 <svelte:window

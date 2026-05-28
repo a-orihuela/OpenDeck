@@ -4,8 +4,8 @@
 	import { getWebserverUrl, getWebSocketPort } from "$lib/ports";
 	import { inspectedInstance } from "$lib/propertyInspector";
 
-	import { invoke } from "@tauri-apps/api/core";
-	import { listen } from "@tauri-apps/api/event";
+	import { makeInfo, openUrl, switchPropertyInspector } from "$lib/api/commands";
+	import { onPluginReloaded } from "$lib/api/events";
 
 	let iframes: { [context: string]: HTMLIFrameElement } = {};
 	let iframeContainer: HTMLDivElement;
@@ -28,7 +28,7 @@
 		}
 
 		if (instance == null || !iframe.src || !iframe.src.startsWith(getWebserverUrl())) return;
-		const info = JSON.stringify(await invoke("make_info", { plugin: instance.action.plugin }));
+		const info = JSON.stringify(await makeInfo(instance.action.plugin));
 
 		iframe?.contentWindow?.postMessage({
 			event: "connect",
@@ -102,7 +102,7 @@
 		} else if (data.event == "windowClosed") {
 			closePopup(data.payload);
 		} else if (data.event == "openUrl") {
-			invoke("open_url", { url: data.payload });
+			openUrl(data.payload);
 		} else if (data.event == "fetch") {
 			function combineUint8Arrays(arrays: Uint8Array[]): Uint8Array {
 				const totalLength = arrays.reduce((acc, curr) => acc + curr.length, 0);
@@ -155,12 +155,12 @@
 		.reduce((prev, current) => prev.concat(current.children ? [current, ...current.children] : current), [] as ActionInstance[])
 		.concat(profile.sliders.filter(nonNull));
 
-	listen("plugin_reloaded", ({ payload }: { payload: string }) => {
+	onPluginReloaded((pluginId) => {
 		for (const instance of instances) {
-			if (instance.action.plugin == payload && iframes[instance.context]) {
+			if (instance.action.plugin == pluginId && iframes[instance.context]) {
 				iframes[instance.context].src += "";
 				if ($inspectedInstance == instance.context) {
-					invoke("switch_property_inspector", { new: instance.context });
+					switchPropertyInspector(null, instance.context);
 				}
 			}
 		}

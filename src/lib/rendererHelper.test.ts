@@ -4,8 +4,8 @@ vi.mock("./ports.ts", () => ({
 	getWebserverUrl: (path: string) => `http://localhost:57118/${path}`,
 }));
 
-vi.mock("@tauri-apps/api/core", () => ({
-	invoke: vi.fn(),
+vi.mock("./api/commands.ts", () => ({
+	updateImage: vi.fn(),
 }));
 
 import { getImage } from "./rendererHelper.ts";

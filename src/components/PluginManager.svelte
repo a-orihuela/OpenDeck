@@ -16,32 +16,38 @@
 	import { localisations, settings } from "$lib/settings";
 	import { actionList, deviceSelector, PRODUCT_NAME } from "$lib/singletons";
 
-	import { invoke } from "@tauri-apps/api/core";
-	import { listen } from "@tauri-apps/api/event";
+	import { installPlugin as apiInstallPlugin, listPlugins, openLogDirectory, reloadPlugin, removePlugin as apiRemovePlugin, showSettingsInterface } from "$lib/api/commands";
+	import { onPluginInstallProgress } from "$lib/api/events";
+	import {
+		type GitHubPlugin,
+		checkUpdateAvailable,
+		fetchElgatoArchive,
+		fetchGitHubReleases,
+		fetchOpenSourceCatalogue,
+		filterInstallableAssets,
+		parseInstallPluginUrl,
+	} from "$lib/services/pluginService";
 	import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 	import { ask, message, open } from "@tauri-apps/plugin-dialog";
 
-	// @ts-expect-error
-	const fetch = window.fetchNative ?? window.fetch;
-
 	let showPopup: boolean;
 	setInterval(async () => {
-		if (showPopup) installed = await invoke("list_plugins");
+		if (showPopup) installed = await listPlugins();
 	}, 1e3);
 
 	let installProgress: { downloaded: number; total: number | null } | null = null;
-	listen("plugin_install_progress", ({ payload }: { payload: { downloaded: number; total: number | null } }) => {
-		installProgress = payload;
+	onPluginInstallProgress((downloaded, total) => {
+		installProgress = { downloaded, total };
 	});
 
 	async function installPlugin(name: string, url: string | null, file: string | null, fallback_id: string | null) {
 		if (!file && !await ask(`It may take a while to install the plugin.`, { title: `Install "${name}"?` })) return;
 		installProgress = url ? { downloaded: 0, total: null } : null;
 		try {
-			await invoke("install_plugin", { url, file, fallback_id });
+			await apiInstallPlugin(url, file, fallback_id);
 			message(`Successfully installed "${name}".`, { title: `Installed "${name}"` });
 			$actionList?.reload();
-			installed = await invoke("list_plugins");
+			installed = await listPlugins();
 		} catch (error: any) {
 			message(error, { title: `Failed to install "${name}"` });
 		} finally {
@@ -71,46 +77,26 @@
 	}
 
 	let openDetailsView: string | null = null;
-	type GitHubPlugin = {
-		name: string;
-		author: string;
-		repository: string;
-		download_url: string | undefined;
-	};
+
 	async function installPluginGitHub(id: string, plugin: GitHubPlugin) {
 		if (plugin.download_url) {
 			await installPlugin(plugin.name, plugin.download_url, null, id);
 			return;
 		}
-
-		let endpoint = new URL(plugin.repository);
-		endpoint.hostname = "api." + endpoint.hostname;
-		endpoint.pathname = "/repos" + endpoint.pathname + "/releases";
-
-		let res;
+		let releases;
 		try {
-			res = await (await fetch(endpoint)).json();
+			releases = await fetchGitHubReleases(plugin.repository);
 		} catch (error: any) {
 			message(error, { title: `Failed to install "${plugin.name}"` });
 			return;
 		}
-
-		let assets = [];
-		for (const asset of res[0].assets) {
-			if (asset.name.toLowerCase().endsWith(".streamdeckplugin") || asset.name.toLowerCase().endsWith(".zip")) {
-				assets.push(asset);
-			}
-		}
+		const assets = filterInstallableAssets(releases);
 		let selected;
-		if (assets.length == 1) selected = assets[0];
+		if (assets.length === 1) selected = assets[0];
 		else {
-			try {
-				selected = await chooseAsset(assets);
-			} catch {
-				return;
-			}
+			try { selected = await chooseAsset(assets); }
+			catch { return; }
 		}
-
 		await installPlugin(plugin.name, selected.browser_download_url, null, id);
 	}
 
@@ -124,50 +110,24 @@
 		await installPlugin(path.split(/[\/\\]/).at(-1) ?? path, null, path, null);
 	}
 
-	async function removePlugin(plugin: any) {
+	async function confirmRemovePlugin(plugin: any) {
 		if (!await ask(`Are you sure you want to remove "${plugin.name}"?`, { title: `Remove "${plugin.name}"?` })) return;
 		try {
-			await invoke("remove_plugin", { id: plugin.id });
+			await apiRemovePlugin(plugin.id);
 			message(`Successfully removed "${plugin.name}".`, { title: `Removed "${plugin.name}"` });
 			$actionList?.reload();
 			$deviceSelector?.reloadProfiles();
-			installed = await invoke("list_plugins");
+			installed = await listPlugins();
 		} catch (error: any) {
 			message(error, { title: `Failed to remove "${plugin.name}"` });
 		}
 	}
 
-	async function isUpdateAvailable(plugin: any): Promise<string | false> {
-		const id = plugin.id.endsWith(".sdPlugin") ? plugin.id.slice(0, -9) : plugin.id;
-		const cataloguePlugin = plugins[id];
-		if (!cataloguePlugin || cataloguePlugin.download_url) return false;
-
-		try {
-			const endpoint = new URL(cataloguePlugin.repository);
-			endpoint.hostname = "api." + endpoint.hostname;
-			endpoint.pathname = "/repos" + endpoint.pathname + "/releases/latest";
-
-			const res = await fetch(endpoint);
-			if (!res.ok) return false;
-			const release = await res.json();
-
-			const normalizeVersion = (v: string) => v.replace(/^v/, "").replace(/^(\d+\.\d+\.\d+)\.\d+$/, "$1");
-			if (normalizeVersion(release.tag_name) != normalizeVersion(plugin.version)) {
-				return release.tag_name.replace(/^v/, "");
-			} else {
-				return false;
-			}
-		} catch (error) {
-			console.warn("Failed to check for plugin update:", error);
-			return false;
-		}
-	}
-
 	let installed: any[] = [];
-	(async () => installed = await invoke("list_plugins"))();
+	(async () => installed = await listPlugins())();
 
-	let plugins: { [id: string]: GitHubPlugin };
-	(async () => plugins = await (await fetch("https://openactionapi.github.io/plugins/catalogue.json")).json())();
+	let plugins: Record<string, GitHubPlugin>;
+	(async () => plugins = await fetchOpenSourceCatalogue())();
 
 	let showArchive: boolean = false;
 	let archivePlugins: any[] | null = null;
@@ -178,7 +138,7 @@
 		for (const plugin of installed) {
 			if (!checkedPlugins.has(plugin.id)) {
 				checkedPlugins.add(plugin.id);
-				isUpdateAvailable(plugin)
+				checkUpdateAvailable(plugin, plugins ?? {})
 					.then((version) => availableUpdates = { ...availableUpdates, [plugin.id]: version });
 			}
 		}
@@ -197,9 +157,8 @@
 	let query: string = "";
 
 	onOpenUrl((urls: string[]) => {
-		if (!urls[0].includes("installPlugin/")) return;
-		let id = urls[0].split("installPlugin/")[1];
-		if (!plugins[id]) return;
+		const id = parseInstallPluginUrl(urls[0]);
+		if (!id || !plugins?.[id]) return;
 		installPluginGitHub(id, plugins[id]);
 	});
 </script>
@@ -259,11 +218,11 @@
 				subtitle={plugin.version}
 				disconnected={!plugin.registered}
 				action={() => {
-					if ($settings?.developer) invoke("reload_plugin", { id: plugin.id });
-					else removePlugin(plugin);
+					if ($settings?.developer) reloadPlugin(plugin.id);
+					else confirmRemovePlugin(plugin);
 				}}
 				actionLabel={$settings?.developer ? "Reload" : "Remove"}
-				secondaryAction={!plugin.registered ? () => invoke("open_log_directory") : plugin.has_settings_interface ? () => invoke("show_settings_interface", { plugin: plugin.id }) : undefined}
+				secondaryAction={!plugin.registered ? () => openLogDirectory() : plugin.has_settings_interface ? () => showSettingsInterface(plugin.id) : undefined}
 				secondaryActionLabel={!plugin.registered ? "View logs" : "Settings"}
 			>
 				<svelte:fragment slot="subtitle">
@@ -359,7 +318,7 @@
 			class="ml-2 mt-2 mb-2 px-2 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
 			on:click={async () => {
 				showArchive = true;
-				archivePlugins = await (await fetch("https://plugins.amankhanna.me/catalogue.json")).json();
+				archivePlugins = await fetchElgatoArchive();
 			}}
 		>
 			Load Elgato App Store archive

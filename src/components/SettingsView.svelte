@@ -11,30 +11,24 @@
 	import { settings } from "$lib/settings";
 	import { PRODUCT_NAME } from "$lib/singletons";
 
-	import { invoke } from "@tauri-apps/api/core";
-	import { listen } from "@tauri-apps/api/event";
+	import { backupConfigDirectory, getBuildInfo, openConfigDirectory, openLogDirectory, openUrl, restoreConfigDirectory } from "$lib/api/commands";
+	import { onDeviceBrightness } from "$lib/api/events";
 	import { message } from "@tauri-apps/plugin-dialog";
 	import { notify } from "$lib/notifications";
 
 	let showPopup: boolean;
 	let buildInfo: string;
-	(async () => buildInfo = await invoke("get_build_info"))();
+	(async () => buildInfo = await getBuildInfo())();
 
-	listen("device_brightness", ({ payload }: { payload: { action: string; value: number } }) => {
+	onDeviceBrightness((action, amount) => {
 		if (!$settings) return;
-		let value = $settings.brightness;
-		switch (payload.action) {
-			case "increase":
-				value += payload.value;
-				break;
-			case "decrease":
-				value -= payload.value;
-				break;
-			default:
-				value = payload.value;
-				break;
+		let brightness = $settings.brightness;
+		switch (action) {
+			case "increase": brightness += amount; break;
+			case "decrease": brightness -= amount; break;
+			default:         brightness  = amount; break;
 		}
-		$settings.brightness = Math.max(0, Math.min(100, value));
+		$settings.brightness = Math.max(0, Math.min(100, brightness));
 	});
 
 	async function backupConfig() {
@@ -42,7 +36,7 @@
 			"You will be prompted to select a location to save the backup to. The config directory will be compressed and saved there. This may take a while if you have many plugins or profiles.",
 			{ title: "Backing up configuration" },
 		);
-		if (await invoke("backup_config_directory")) {
+		if (await backupConfigDirectory()) {
 			await message(
 				"Successfully backed up the config directory.",
 				{ title: "Backup complete" },
@@ -57,7 +51,7 @@
 			{ title: "Restoring configuration" },
 		);
 		try {
-			await invoke("restore_config_directory");
+			await restoreConfigDirectory();
 		} catch (error: any) {
 			notify(String(error));
 		}
@@ -189,14 +183,14 @@
 			</button>
 			<button
 				class="flex flex-row items-center px-2 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
-				on:click={() => invoke("open_config_directory")}
+				on:click={() => openConfigDirectory()}
 			>
 				<Gear class="mr-1" />
 				Open config
 			</button>
 			<button
 				class="flex flex-row items-center px-2 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
-				on:click={() => invoke("open_log_directory")}
+				on:click={() => openLogDirectory()}
 			>
 				<Scroll class="mr-1" />
 				Open logs
@@ -210,12 +204,12 @@
 		<div class="absolute bottom-6 flex flex-row items-center text-sm text-neutral-400">
 			<span class="mr-1">
 				Please leave a
-				<button on:click={() => invoke("open_url", { url: "https://github.com/nekename/OpenDeck" })} class="underline">star on GitHub</button>
+				<button on:click={() => openUrl("https://github.com/a-orihuela/OpenDeck")} class="underline">star on GitHub</button>
 			</span>
 			<Star weight="fill" fill="yellow" />
 			<span class="mx-1">
 				or
-				<button on:click={() => invoke("open_url", { url: "https://github.com/sponsors/nekename" })} class="underline">sponsor me</button>
+				<button on:click={() => openUrl("https://github.com/a-orihuela/OpenDeck")} class="underline">open on GitHub</button>
 			</span>
 			<Heart weight="fill" fill="fuchsia" />
 			<span class="ml-1">for my work :)</span>

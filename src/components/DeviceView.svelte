@@ -8,8 +8,9 @@
 	import { inFolderMode } from "$lib/singletons";
 	import { renderImage } from "$lib/rendererHelper";
 
-	import { invoke } from "@tauri-apps/api/core";
-	import { listen } from "@tauri-apps/api/event";
+	import { addPage, exitFolder, getActivePage, removeLastPage, setActivePage } from "$lib/api/commands";
+	import { onFolderClosed, onFolderOpened, onPageChanged } from "$lib/api/events";
+	import { computeGridRowLengths, dropMoveInstance, dropNewAction, flatIndexFromRowCol, pasteItem, rowColFromFlatIndex } from "$lib/services/deviceService";
 	import { notify } from "$lib/notifications";
 	import { onDestroy } from "svelte";
 
@@ -21,25 +22,21 @@
 	let activePage = 0;
 
 	// Keep activePage in sync when device changes or when the hardware navigates.
-	$: if (device) invoke<number>("get_active_page", { device: device.id }).then(p => activePage = p);
+	$: if (device) getActivePage(device.id).then(p => activePage = p);
 
-	const unlisten = listen<{ device: string; page: number }>("page_changed", ({ payload }) => {
-		if (payload.device === device.id) activePage = payload.page;
+	const unlisten = onPageChanged((dev, page) => {
+		if (dev === device.id) activePage = page;
 	});
 	onDestroy(() => unlisten.then(fn => fn()));
 
 	// Folder mode state.
 	let activeFolderContext: string | null = null;
 
-	const unlistenFolderOpened = listen<{ device: string; folder_context: string }>("folder_opened", ({ payload }) => {
-		if (payload.device === device.id) {
-			activeFolderContext = payload.folder_context;
-		}
+	const unlistenFolderOpened = onFolderOpened((dev, folderContext) => {
+		if (dev === device.id) activeFolderContext = folderContext;
 	});
-	const unlistenFolderClosed = listen<{ device: string }>("folder_closed", ({ payload }) => {
-		if (payload.device === device.id) {
-			activeFolderContext = null;
-		}
+	const unlistenFolderClosed = onFolderClosed((dev) => {
+		if (dev === device.id) activeFolderContext = null;
 	});
 	onDestroy(() => {
 		unlistenFolderOpened.then(fn => fn());
@@ -49,6 +46,7 @@
 	// Sync inFolderMode store for ActionList filtering.
 	$: if (selectedDevice === device.id) inFolderMode.set(activeFolderContext !== null);
 
+	$: gridRowLengths = computeGridRowLengths(device);
 	$: pageSize = device.rows * device.columns;
 	$: pageStart = activePage * pageSize;
 	$: touchpointStart = (profile.num_pages ?? 1) * pageSize;
@@ -100,32 +98,22 @@
 	}
 
 	async function handleDrop({ dataTransfer }: DragEvent, controller: string, position: number) {
-		let context = { device: device.id, profile: profile.id, controller, position };
-		// In folder mode, key drops go to folder slots; the backend routes correctly.
-		let array = controller == "Encoder" ? profile.sliders : (activeFolderContext ? folderSlots : profile.keys);
+		const context: Context = { device: device.id, profile: profile.id, controller, position };
+		const array = controller == "Encoder" ? profile.sliders : (activeFolderContext ? folderSlots : profile.keys);
 		try {
 			if (dataTransfer?.getData("action")) {
-				let action = JSON.parse(dataTransfer?.getData("action"));
-				if (array[position]) return;
-				const result: ActionInstance | null = await invoke("create_instance", { context, action });
+				const result = await dropNewAction(context, dataTransfer.getData("action"), array[position]);
 				if (result) {
 					array[position] = result;
-					if (activeFolderContext) {
-						folderSlots = [...folderSlots];
-					} else {
-						profile = profile;
-					}
+					activeFolderContext ? (folderSlots = [...folderSlots]) : (profile = profile);
 				}
 			} else if (dataTransfer?.getData("controller") && !activeFolderContext) {
-				let oldArray = dataTransfer?.getData("controller") == "Encoder" ? profile.sliders : profile.keys;
-				let oldPosition = parseInt(dataTransfer?.getData("position"));
-				let response: ActionInstance = await invoke("move_instance", {
-					source: { device: device.id, profile: profile.id, controller: dataTransfer?.getData("controller"), position: oldPosition },
-					destination: context,
-					retain: false,
-				});
-				if (response) {
-					array[position] = response;
+				const oldController = dataTransfer.getData("controller");
+				const oldPosition = parseInt(dataTransfer.getData("position"));
+				const oldArray = oldController == "Encoder" ? profile.sliders : profile.keys;
+				const { instance } = await dropMoveInstance(device, profile, oldController, oldPosition, context);
+				if (instance) {
+					array[position] = instance;
 					oldArray[oldPosition] = null;
 					profile = profile;
 				}
@@ -136,26 +124,16 @@
 	}
 
 	async function handlePaste(item: CopiedItem, destination: Context) {
-		let array = destination.controller == "Encoder" ? profile.sliders : (activeFolderContext ? folderSlots : profile.keys);
+		const array = destination.controller == "Encoder" ? profile.sliders : (activeFolderContext ? folderSlots : profile.keys);
 		try {
-			if (item.type == "action") {
-				if (array[destination.position]) return;
-				const result: ActionInstance | null = await invoke("create_instance", { context: destination, action: item.action });
-				if (result) {
-					array[destination.position] = result;
-					if (activeFolderContext) {
-						folderSlots = [...folderSlots];
-					} else {
-						profile = profile;
-					}
+			const result = await pasteItem(item, destination, array[destination.position], activeFolderContext);
+			if (result) {
+				array[destination.position] = result;
+				if (item.type === "action") {
+					activeFolderContext ? (folderSlots = [...folderSlots]) : (profile = profile);
+				} else {
+					profile = profile;
 				}
-				return;
-			}
-			if (activeFolderContext) return;
-			let response: ActionInstance = await invoke("move_instance", { source: item.source, destination, retain: true });
-			if (response) {
-				array[destination.position] = response;
-				profile = profile;
 			}
 		} catch (error: any) {
 			notify(String(error));
@@ -164,7 +142,7 @@
 
 	async function handleAddPage() {
 		try {
-			const newCount = await invoke<number>("add_page", { device: device.id });
+			const newCount = await addPage(device.id);
 			profile = { ...profile, num_pages: newCount };
 		} catch (error: any) {
 			notify(String(error));
@@ -173,7 +151,7 @@
 
 	async function handleRemoveLastPage() {
 		try {
-			const newCount = await invoke<number>("remove_last_page", { device: device.id });
+			const newCount = await removeLastPage(device.id);
 			profile = { ...profile, num_pages: newCount };
 			if (activePage >= newCount) activePage = newCount - 1;
 		} catch (error: any) {
@@ -182,13 +160,13 @@
 	}
 
 	async function handleSetActivePage(page: number) {
-		await invoke("set_active_page", { device: device.id, page });
+		await setActivePage(device.id, page);
 		activePage = page;
 	}
 
 	async function handleExitFolder() {
 		try {
-			await invoke("exit_folder", { device: device.id });
+			await exitFolder(device.id);
 		} catch (error: any) {
 			notify(String(error));
 		}
@@ -201,28 +179,8 @@
 	let focusedRow = 0;
 	let focusedCol = 0;
 
-	$: gridRowLengths = [
-		...Array(device.rows).fill(device.columns),
-		...(device.encoders > 0 ? [device.encoders] : []),
-		...(device.touchpoints > 0 ? [device.touchpoints] : []),
-	];
 	$: encoderRowIndex = device.rows;
 	$: touchpointRowIndex = device.rows + (device.encoders > 0 ? 1 : 0);
-
-	function flatIndexFromRowCol(row: number, col: number): number {
-		let index = 0;
-		for (let r = 0; r < row; r++) index += gridRowLengths[r];
-		return index + col;
-	}
-
-	function rowColFromFlatIndex(flatIndex: number): [number, number] {
-		let remaining = flatIndex;
-		for (let r = 0; r < gridRowLengths.length; r++) {
-			if (remaining < gridRowLengths[r]) return [r, remaining];
-			remaining -= gridRowLengths[r];
-		}
-		return [0, 0];
-	}
 
 	function handleGridKeydown(event: KeyboardEvent) {
 		const target = event.target as HTMLElement;
@@ -265,7 +223,7 @@
 
 		const grid = event.currentTarget as HTMLElement;
 		const cells = grid.querySelectorAll("[role='gridcell']");
-		(cells[flatIndexFromRowCol(newRow, newCol)] as HTMLElement)?.focus();
+		(cells[flatIndexFromRowCol(gridRowLengths, newRow, newCol)] as HTMLElement)?.focus();
 	}
 
 	function handleGridFocusin(event: FocusEvent) {
@@ -273,7 +231,7 @@
 		const cells = Array.from(grid.querySelectorAll("[role='gridcell']"));
 		const index = cells.indexOf(event.target as Element);
 		if (index === -1) return;
-		[focusedRow, focusedCol] = rowColFromFlatIndex(index);
+		[focusedRow, focusedCol] = rowColFromFlatIndex(gridRowLengths, index);
 	}
 </script>
 

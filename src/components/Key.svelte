@@ -14,8 +14,8 @@
 	import { connectedPlugins } from "$lib/pluginStatus";
 	import { notify } from "$lib/notifications";
 
-	import { invoke } from "@tauri-apps/api/core";
-	import { listen } from "@tauri-apps/api/event";
+	import { enterFolder, removeInstance, triggerVirtualPress as apiTriggerVirtualPress, updateImage } from "$lib/api/commands";
+	import { onKeyMoved, onShowAlert, onShowOk, onUpdateState } from "$lib/api/events";
 	import { tick } from "svelte";
 
 	export let context: Context | null;
@@ -46,12 +46,12 @@
 		}
 	}
 
-	listen("update_state", ({ payload }: { payload: { context: string; contents: ActionInstance | null } }) => {
-		if (payload.context == slot?.context) slot = payload.contents;
+	onUpdateState((ctx, contents) => {
+		if (ctx == slot?.context) slot = contents;
 	});
 
-	listen("key_moved", ({ payload }: { payload: { context: Context; pressed: boolean } }) => {
-		if (JSON.stringify(context) == JSON.stringify(payload.context)) pressed = payload.pressed;
+	onKeyMoved((ctx, isPressed) => {
+		if (JSON.stringify(context) == JSON.stringify(ctx)) pressed = isPressed;
 	});
 
 	function select(event: MouseEvent | KeyboardEvent) {
@@ -62,7 +62,7 @@
 			return;
 		}
 		if (slot.action.uuid == "opendeck.folder" && context) {
-			invoke("enter_folder", { device: context.device, folderContext: slot.context });
+			enterFolder(context.device, slot.context);
 			return;
 		}
 		if (slot.action.uuid == "opendeck.multiaction" || slot.action.uuid == "opendeck.toggleaction") {
@@ -122,7 +122,7 @@
 		$openContextMenu = null;
 		if (!slot) return;
 		try {
-			await invoke("remove_instance", { context: slot.context });
+			await removeInstance(slot.context);
 		} catch (error: any) {
 			notify(String(error));
 			return;
@@ -138,15 +138,15 @@
 	let showOk: boolean = false;
 	$: pluginOffline = !!slot && slot.action.plugin !== "opendeck" && !$connectedPlugins.has(slot.action.plugin);
 	let timeouts: number[] = [];
-	listen("show_alert", ({ payload }: { payload: string }) => {
-		if (!slot || payload != slot.context) return;
+	onShowAlert((ctx) => {
+		if (!slot || ctx != slot.context) return;
 		timeouts.forEach(clearTimeout);
 		showOk = false;
 		showAlert = true;
 		timeouts.push(setTimeout(() => showAlert = false, 1.5e3));
 	});
-	listen("show_ok", ({ payload }: { payload: string }) => {
-		if (!slot || payload != slot.context) return;
+	onShowOk((ctx) => {
+		if (!slot || ctx != slot.context) return;
 		timeouts.forEach(clearTimeout);
 		showAlert = false;
 		showOk = true;
@@ -163,7 +163,7 @@
 			try {
 				const ctx = canvas?.getContext("2d");
 				if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-				if (active) await invoke("update_image", { context, image: null });
+				if (active) await updateImage(context as any, null);
 			} finally {
 				unlock();
 			}
@@ -188,7 +188,7 @@
 
 	async function triggerVirtualPress() {
 		if (!active || !context || !slot) return;
-		await invoke("trigger_virtual_press", { context });
+		await apiTriggerVirtualPress(context as any);
 	}
 
 	$: accessibleLabel = label + (slot ? ": " + slot.action.name + (state?.show && state?.text ? " - " + state.text : "") : "");

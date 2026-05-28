@@ -1,11 +1,11 @@
-import { invoke } from "@tauri-apps/api/core";
+import { getPortBase } from "./api/commands.ts";
 
 let portBase = 57116;
 let initialised = false;
 
 export async function initPortBase(): Promise<void> {
 	if (initialised) return;
-	portBase = await invoke<number>("get_port_base");
+	portBase = await getPortBase();
 	initialised = true;
 }
 

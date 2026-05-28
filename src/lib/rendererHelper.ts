@@ -2,7 +2,7 @@ import type { ActionState, Context } from "./bindings.ts";
 
 import { getWebserverUrl } from "./ports.ts";
 
-import { invoke } from "@tauri-apps/api/core";
+import { updateImage } from "./api/commands.ts";
 
 export function getImage(image: string | undefined, fallback: string | undefined): string {
 	if (!image) return fallback ? getImage(fallback, undefined) : "/alert.png";
@@ -181,7 +181,7 @@ export async function renderImage(
 
 	context.restore();
 
-	if (active && slotContext) setTimeout(async () => await invoke("update_image", { context: slotContext, image: canvas.toDataURL("image/jpeg") }), 10);
+	if (active && slotContext) setTimeout(async () => await updateImage(slotContext, canvas.toDataURL("image/jpeg")), 10);
 	else if (preview) return canvas.toDataURL();
 }
 

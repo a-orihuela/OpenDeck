@@ -10,21 +10,32 @@
 
 	import { inspectedInstance } from "$lib/propertyInspector";
 
-	import { invoke } from "@tauri-apps/api/core";
-	import { listen } from "@tauri-apps/api/event";
+	import {
+		deleteProfile as apiDeleteProfile,
+		getApplicationProfiles,
+		getApplications,
+		getProfiles as apiGetProfiles,
+		getSelectedProfile as apiGetSelectedProfile,
+		renameProfile as apiRenameProfile,
+		setApplicationProfiles,
+		setSelectedProfile as apiSetSelectedProfile,
+	} from "$lib/api/commands";
+	import { onApplications, onRerenderImages } from "$lib/api/events";
+	import {
+		flatProfileList,
+		generateDuplicateName,
+		organizeIntoFolders,
+		removeFolderEntry,
+		updateFoldersAfterRename,
+	} from "$lib/services/profileService";
 	import { message } from "@tauri-apps/plugin-dialog";
 
 	let folders: { [name: string]: string[] } = {};
 	let value: string;
 	async function getProfiles(device: DeviceInfo) {
-		let profiles: string[] = await invoke("get_profiles", { device: device.id });
-		folders = {};
-		for (const id of profiles) {
-			let folder = id.includes("/") ? id.split("/")[0] : "";
-			if (folders[folder]) folders[folder].push(id);
-			else folders[folder] = [id];
-		}
-		profile = await invoke("get_selected_profile", { device: device.id });
+		const profiles = await apiGetProfiles(device.id);
+		folders = organizeIntoFolders(profiles);
+		profile = await apiGetSelectedProfile(device.id);
 		value = profile.id;
 		oldValue = value;
 	}
@@ -39,8 +50,8 @@
 			value = id;
 			return;
 		}
-		await invoke("set_selected_profile", { device: device.id, id });
-		profile = await invoke("get_selected_profile", { device: device.id });
+		await apiSetSelectedProfile(device.id, id);
+		profile = await apiGetSelectedProfile(device.id);
 
 		let folder = id.includes("/") ? id.split("/")[0] : "";
 		if (folders[folder]) {
@@ -51,9 +62,9 @@
 		$inspectedInstance = null;
 	}
 
-	listen("rerender_images", async () => {
+	onRerenderImages(async () => {
 		try {
-			profile = await invoke("get_selected_profile", { device: device.id });
+			profile = await apiGetSelectedProfile(device.id);
 		} catch {}
 	});
 
@@ -64,10 +75,8 @@
 				applicationProfiles = applicationProfiles;
 			}
 		}
-		await invoke("delete_profile", { device: device.id, profile: id });
-		let folder = id.includes("/") ? id.split("/")[0] : "";
-		folders[folder].splice(folders[folder].indexOf(id), 1);
-		folders = folders;
+		await apiDeleteProfile(device.id, id);
+		folders = removeFolderEntry(folders, id);
 	}
 
 	let renamingProfile: string | null = null;
@@ -76,65 +85,33 @@
 
 	async function saveRenamedProfile(oldId: string) {
 		if (!renameInput.checkValidity() || !newId) return;
-		if (newId == oldId) {
-			renamingProfile = null;
-			return;
-		}
+		if (newId == oldId) { renamingProfile = null; return; }
 
-		// Check if a profile with the new ID already exists
-		const allProfiles = Object.values(folders).flat();
-		if (allProfiles.includes(newId)) {
+		if (flatProfileList(folders).includes(newId)) {
 			message(`A profile with the ID "${newId}" already exists.`, { title: "Failed to rename profile" });
 			return;
 		}
 
 		try {
-			await invoke("rename_profile", { device: device.id, oldId, newId, retain: false });
+			await apiRenameProfile(device.id, oldId, newId, false);
 		} catch (error: any) {
 			message(error, { title: "Failed to rename profile" });
 			console.error(error);
+			return;
 		}
 
-		// Update application profile mappings
 		for (const devices of Object.values(applicationProfiles)) {
 			if (devices[device.id] == oldId) devices[device.id] = newId;
 		}
 		applicationProfiles = applicationProfiles;
-
-		// Update folders structure
-		const oldFolder = oldId.includes("/") ? oldId.split("/")[0] : "";
-		const newFolder = newId.includes("/") ? newId.split("/")[0] : "";
-
-		// Remove from old folder
-		if (folders[oldFolder]) {
-			const index = folders[oldFolder].indexOf(oldId);
-			if (index != -1) {
-				folders[oldFolder].splice(index, 1);
-				if (folders[oldFolder].length == 0 && oldFolder != "") delete folders[oldFolder];
-			}
-		}
-
-		// Add to new folder
-		if (folders[newFolder]) folders[newFolder].push(newId);
-		else folders[newFolder] = [newId];
-
-		folders = folders;
+		folders = updateFoldersAfterRename(folders, oldId, newId);
 		renamingProfile = null;
 	}
 	$: if (renameInput) renameInput.focus();
 
 	async function duplicateProfile(id: string) {
-		let newId = id + " Copy";
-
-		// Check if a profile with the new ID already exists
-		const allProfiles = Object.values(folders).flat();
-		let counter = 1;
-		while (allProfiles.includes(newId)) {
-			counter++;
-			newId = `${id} Copy ${counter}`;
-		}
-
-		await invoke("rename_profile", { device: device.id, oldId: id, newId, retain: true });
+		const newId = generateDuplicateName(id, flatProfileList(folders));
+		await apiRenameProfile(device.id, id, newId, true);
 		await getProfiles(device);
 	}
 
@@ -156,10 +133,10 @@
 	let applications: string[];
 	let applicationProfiles: { [appName: string]: { [device: string]: string } };
 	(async () => {
-		applications = await invoke("get_applications");
-		applicationProfiles = await invoke("get_application_profiles");
+		applications = await getApplications();
+		applicationProfiles = await getApplicationProfiles();
 	})();
-	listen("applications", ({ payload }: { payload: string[] }) => applications = payload);
+	onApplications((apps) => applications = apps);
 	let applicationsAddAppName: string = "opendeck_select_application";
 	let applicationsAddProfile: string = "opendeck_select_profile";
 	$: {
@@ -173,7 +150,7 @@
 	$: {
 		if (applicationProfiles) {
 			applicationProfiles = Object.fromEntries(Object.entries(applicationProfiles).filter(([_, devices]) => Object.values(devices).filter((v) => v).length != 0));
-			invoke("set_application_profiles", { value: applicationProfiles });
+			setApplicationProfiles(applicationProfiles);
 		}
 	}
 

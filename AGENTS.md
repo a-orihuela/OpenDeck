@@ -182,6 +182,40 @@ Plugins: <config_dir>/plugins/
 
 Flatpak uses different paths with `~/.var/app/OPENDECK_APP_ID/` prefix.
 
+## Frontend Architecture
+
+The frontend is organised in four layers to keep the Svelte UI replaceable by any other framework (React, Vue, etc.):
+
+```
+src/lib/api/        ← Layer 1: API Gateway (pure TypeScript, no framework)
+src/lib/state/      ← Layer 3: Observable state (pure TypeScript, no framework)  [planned]
+src/lib/services/   ← Layer 2: Business logic (pure TypeScript, no framework)    [planned]
+src/components/     ← Layer 4: UI (Svelte — the only layer that may change)
+```
+
+### Rules — enforce on every PR
+
+1. **Never** call `invoke()` or `listen()` directly in a `.svelte` file.
+2. **Never** import from `svelte/store` in files under `src/lib/` (except `src/lib/state/svelte-adapters.ts`).
+3. All backend commands go through `src/lib/api/commands.ts`.
+4. All backend event subscriptions go through `src/lib/api/events.ts`.
+5. Business logic that goes beyond rendering HTML belongs in `src/lib/services/`.
+
+### Verification
+
+```bash
+# Must return 0 results:
+grep -r "invoke\|\"@tauri-apps/api" src/components/
+grep -r "from \"@tauri-apps/api" src/lib/ | grep -v src/lib/api/
+```
+
+### Migration path to another framework
+
+When replacing Svelte with React (or any other framework):
+1. Keep `src/lib/api/`, `src/lib/state/`, `src/lib/services/` unchanged.
+2. Replace only `src/components/*.svelte` with `*.tsx` (or equivalent).
+3. Replace `src/lib/state/svelte-adapters.ts` with framework-specific hooks/context.
+
 ## Testing & Debugging
 
 - Run from terminal to see live logs: `deno task tauri dev`
