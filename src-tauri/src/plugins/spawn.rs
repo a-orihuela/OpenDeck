@@ -223,11 +223,6 @@ pub async fn spawn_plugin(
 					.arg(serde_json::to_string(&info)?)
 					.stdout(Stdio::from(log_file.try_clone()?))
 					.stderr(Stdio::from(log_file));
-				if crate::store::get_settings().value.separatewine {
-					command.env("WINEPREFIX", path.join("wineprefix").to_string_lossy().to_string());
-				} else {
-					let _ = fs::remove_dir_all(path.join("wineprefix"));
-				}
 				#[cfg(target_os = "linux")]
 				attach_parent_death_signal(&mut command);
 				Ok((plugin_uuid, PluginChildType::Wine, command))

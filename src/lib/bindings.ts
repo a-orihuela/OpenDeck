@@ -83,9 +83,6 @@ export type Settings = {
 	rotation: number,
 	background: boolean,
 	autolaunch: boolean,
-	updatecheck: boolean,
-	statistics: boolean,
-	separatewine: boolean,
 	developer: boolean,
 	disableelgato: boolean,
 };

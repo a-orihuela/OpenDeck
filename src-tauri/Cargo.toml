@@ -40,7 +40,6 @@ tauri-plugin-single-instance = { version = "2.4", features = ["deep-link"] }
 tauri-plugin-autostart = "2.5"
 tauri-plugin-dialog = "2.6"
 tauri-plugin-deep-link = "2.4"
-tauri-plugin-aptabase = "1.0"
 serde-inline-default = "1.0"
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 specta-serde = "=0.0.12"

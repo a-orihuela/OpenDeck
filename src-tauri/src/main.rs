@@ -190,30 +190,13 @@ async fn main() {
 					settings.save()?;
 					if old_version == "0.0.0" {
 						app.dialog()
-							.message(format!(
-								r#"Thanks for installing {PRODUCT_NAME}!
-If you have any issues, please reach out on any of the support channels listed on GitHub (and make sure to star the project while you're there!).
-
-Some minimal statistics (such as operating system and plugins installed) will be collected from the next time the app starts.
-If you do not wish to support development in this way, please disable statistics in the settings.
-
-Enjoy!"#,
-							))
+							.message(format!("Thanks for installing {PRODUCT_NAME}!\n\nIf you have any issues, please open an issue on GitHub.\n\nEnjoy!"))
 							.title(format!("{PRODUCT_NAME} has successfully been installed"))
 							.kind(MessageDialogKind::Info)
 							.show(|_| ());
-						settings.value.statistics = false;
 					} else {
 						app.dialog()
-							.message(format!(
-								r#"{PRODUCT_NAME} has been updated to v{}!
-Every update brings features, bug fixes, and other improvements, which I spend my time implementing for free.
-
-If you spent $125 on your hardware, please consider spending $10 on the software that makes it work.
-You can donate to support development with just a few clicks on GitHub Sponsors, Ko-fi or Liberapay.
-If you have already donated, thank you so much for your support!"#,
-								built_info::PKG_VERSION
-							))
+							.message(format!("{PRODUCT_NAME} has been updated to v{}!", built_info::PKG_VERSION))
 							.title(format!("{PRODUCT_NAME} has successfully been updated"))
 							.kind(MessageDialogKind::Info)
 							.show(|_| ());
@@ -221,17 +204,6 @@ If you have already donated, thank you so much for your support!"#,
 				}
 				_ => {}
 			}
-
-			use tauri_plugin_aptabase::{Builder, EventTracker, InitOptions};
-			app.handle().plugin(
-				Builder::new(if settings.value.statistics { "A-SH-3841489320" } else { "" })
-					.with_options(InitOptions {
-						host: Some("https://aptabase.amankhanna.me".to_owned()),
-						flush_interval: None,
-					})
-					.build(),
-			)?;
-			let _ = app.track_event("app_started", None);
 
 			tokio::spawn(async {
 				loop {
@@ -286,39 +258,6 @@ If you have already donated, thank you so much for your support!"#,
 			{
 				use tauri_plugin_deep_link::DeepLinkExt;
 				let _ = app.deep_link().register_all();
-			}
-
-			async fn update() -> Result<(), anyhow::Error> {
-				let res = reqwest::Client::new()
-					.get("https://api.github.com/repos/nekename/OpenDeck/releases/latest")
-					.header("Accept", "application/vnd.github+json")
-					.header("User-Agent", "OpenDeck")
-					.send()
-					.await?
-					.json::<serde_json::Value>()
-					.await?;
-				let tag_name = res.get("tag_name").unwrap().as_str().unwrap();
-				if semver::Version::parse(built_info::PKG_VERSION)?.cmp(&semver::Version::parse(&tag_name[1..])?) == Ordering::Less {
-					let app = APP_HANDLE.get().unwrap();
-					app.dialog()
-						.message(format!(
-							"A new version of {PRODUCT_NAME}, {}, is available.\nUpdate description:\n\n{}",
-							tag_name,
-							res.get("body").map(|v| v.as_str().unwrap()).unwrap_or("No description").trim()
-						))
-						.title(format!("{PRODUCT_NAME} update available"))
-						.show(|_| ());
-				}
-
-				Ok(())
-			}
-
-			if settings.value.updatecheck {
-				tokio::spawn(async {
-					if let Err(error) = update().await {
-						log::warn!("Failed to update application: {error}");
-					}
-				});
 			}
 
 			Ok(())
@@ -424,8 +363,6 @@ If you have already donated, thank you so much for your support!"#,
 			futures::executor::block_on(plugins::deactivate_plugins());
 			tokio::spawn(elgato::reset_devices());
 			let _ = std::fs::remove_file(shared::config_dir().join("ports.json"));
-			use tauri_plugin_aptabase::EventTracker;
-			app.flush_events_blocking();
 		}
 	});
 }
