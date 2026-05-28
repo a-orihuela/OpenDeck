@@ -1,7 +1,7 @@
 {
 	"Name": "OpenDeck Starter Pack",
 	"Description": "OpenDeck starter pack plugin",
-	"Author": "Aman Khanna (nekename)",
+	"Author": "Abraham Orihuela Mayor (a-orihuela)",
 	"Version": "2.12.0",
 	"CodePaths": {
 		"x86_64-pc-windows-msvc": "x86_64-pc-windows-msvc/bin/opendeck-starterpack.exe",

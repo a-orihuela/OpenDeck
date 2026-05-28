@@ -12,9 +12,9 @@ Only Elgato hardware is officially supported, but plugins are available for supp
 > [!TIP]
 > No Stream Deck in front of you? Use OpenDeck with [Tacto](https://tacto.live/) to turn any smartphone into one!
 
-If you would like to support development of OpenDeck, consider sponsoring me on [GitHub Sponsors](https://github.com/sponsors/nekename), [Ko-fi](https://ko-fi.com/nekename) or [Liberapay](https://liberapay.com/nekename)! Considering that the power of your Stream Deck comes from the software you use with it, just $5 (only 2.5% of the cost of a Stream Deck+) goes a long way.
-
 Special thanks go to the developers of [Tauri](https://github.com/tauri-apps/tauri), the [elgato-streamdeck](https://github.com/OpenActionAPI/rust-elgato-streamdeck) Rust library, and [Phosphor Icons](https://phosphoricons.com/).
+
+This project is a fork of [nekename/OpenDeck](https://github.com/nekename/OpenDeck).
 
 ### Why use OpenDeck?
 
@@ -31,13 +31,12 @@ Special thanks go to the developers of [Tauri](https://github.com/tauri-apps/tau
 > [!TIP]
 > If you're using a Debian, Ubuntu, Fedora, Fedora Atomic, openSUSE or Arch-based distribution, you can try the automated installation script:
 > ```bash
-> curl -sSL https://raw.githubusercontent.com/nekename/OpenDeck/main/install_opendeck.sh | bash
+> curl -sSL https://raw.githubusercontent.com/a-orihuela/OpenDeck/main/install_opendeck.sh | bash
 > ```
 > The script installs OpenDeck from a released .deb or .rpm file, the AUR, or Flathub, appropriately, and also installs and reloads the appropriate udev subsystem rules. Additionally, you can choose to install Wine and/or Node.js from your distribution during the process.
 
-- Download the latest release from [GitHub Releases](https://github.com/nekename/OpenDeck/releases/latest).
+- Download the latest release from [GitHub Releases](https://github.com/a-orihuela/OpenDeck/releases/latest).
 	- You should avoid AppImage releases of OpenDeck as they tend to have problems (you should also just avoid AppImages in general).
-	- For users of Arch-based distributions, there are the `opendeck` and `opendeck-bin` AUR packages for the latest release, as well as the `opendeck-git` AUR package for the latest commit on the `main` branch of this repository.
 - Install OpenDeck using your package manager of choice.
 - Install the appropriate udev subsystem rules from [here](https://raw.githubusercontent.com/OpenActionAPI/rust-elgato-streamdeck/main/40-streamdeck.rules):
 	- If you're using a `.deb` or `.rpm` release artifact, this file should be installed automatically.
@@ -45,17 +44,14 @@ Special thanks go to the developers of [Tauri](https://github.com/tauri-apps/tau
 	- In both cases, you will need to reload your udev subsystem rules with `sudo udevadm control --reload-rules && sudo udevadm trigger`.
 - If you intend to use some compiled plugins that are not compiled for Linux, you will need to have [Wine](https://www.winehq.org/) installed on your system. Some plugins may also depend on Wine Mono (which is sometimes, but not always included, in your distro's packaging of Wine).
 
-> [!NOTE]
-> If Flatpak is your only option, OpenDeck is [available from Flathub](https://flathub.org/apps/me.amankhanna.opendeck). Please note that you still need to install the udev subsystem rules as described above. To use Windows and Node.js plugins, you should have Wine or Node.js, respectively, installed natively (the Wine and Node.js Flatpaks are not supported).
-
 ### Windows
 
-- Download the latest release (`.exe` or `.msi`) from [GitHub Releases](https://github.com/nekename/OpenDeck/releases/latest).
+- Download the latest release (`.exe` or `.msi`) from [GitHub Releases](https://github.com/a-orihuela/OpenDeck/releases/latest).
 - Double-click the downloaded file to run the installer.
 
 ### macOS
 
-- Download the latest release from [GitHub Releases](https://github.com/nekename/OpenDeck/releases/latest).
+- Download the latest release from [GitHub Releases](https://github.com/a-orihuela/OpenDeck/releases/latest).
 - If you downloaded a `.dmg`, open the downloaded disk image and drag the application inside into your Applications folder; otherwise, extract the `.tar.gz` to your Applications folder.
 - Open the installed application. Note: if you receive a warning about OpenDeck being distributed by an unknown developer, *right-click the app in Finder and then click Open* to suppress the warning.
 - If you intend to use plugins that are only compiled for Windows, you will need to have [Wine](https://www.winehq.org/) installed on your system.
@@ -75,13 +71,13 @@ To change other options, open Settings. From here, you can also view information
 ### Troubleshooting
 
 - Ensure you are running the latest version of OpenDeck, as well as recent versions of related software (e.g. Spotify or OBS).
-- Check the [FAQ](https://github.com/nekename/OpenDeck/wiki/0.-FAQ) and [GitHub Issues](https://github.com/nekename/OpenDeck/issues) to see if there's a fix for your problem already.
+- Check [GitHub Issues](https://github.com/a-orihuela/OpenDeck/issues) to see if there's a fix for your problem already.
 - Check the OpenDeck log file for any important messages. This file should be included with any support request.
 	- You can also run OpenDeck from the terminal to see the logs directly if it's easier than finding the log file or if the log file is empty or missing details.
 	- For issues with plugins, you can also check the plugin's logs (in the same folder, sometimes as well as a file named `plugin.log` or similar in the plugin's own folder).
 	- The log directory can be opened from the settings page of OpenDeck, or alternatively located manually at the paths below:
 		- Linux: `~/.local/share/opendeck/logs/`
-		- Flatpak: `~/.var/app/me.amankhanna.opendeck/data/opendeck/logs/`
+		- Flatpak: `~/.var/app/OPENDECK_APP_ID/data/opendeck/logs/`
 		- Windows: `%appdata%\opendeck\logs\`
 		- macOS: `~/Library/Logs/opendeck/`
 - When trying to run compiled plugins built for Windows on Linux or macOS, please ensure you have the latest version of Wine (and Wine Mono) installed on your system.
@@ -89,9 +85,7 @@ To change other options, open Settings. From here, you can also view information
 
 ### Support forums
 
-- [Discord](https://discord.gg/26Nf8rHvaj)
-- [Matrix](https://matrix.to/#/#opendeck:matrix.org)
-- [GitHub Issues](https://github.com/nekename/OpenDeck/issues)
+- [GitHub Issues](https://github.com/a-orihuela/OpenDeck/issues)
 
 ### Building from source / contributing
 

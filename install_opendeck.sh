@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-GITHUB_REPO="nekename/OpenDeck"
-FLATHUB_APP_ID="me.amankhanna.opendeck"
-UDEV_RULES_URL="https://raw.githubusercontent.com/nekename/OpenDeck/refs/heads/release/src-tauri/bundle/40-streamdeck.rules"
+GITHUB_REPO="a-orihuela/OpenDeck"
+FLATHUB_APP_ID="OPENDECK_APP_ID"
+UDEV_RULES_URL="https://raw.githubusercontent.com/a-orihuela/OpenDeck/refs/heads/release/src-tauri/bundle/40-streamdeck.rules"
 
 if [ -t 1 ]; then
     RED="\033[0;31m"
@@ -21,7 +21,7 @@ else
     RESET=""
 fi
 
-trap 'echo -e "${YELLOW}Need help? Join the Discord: ${BLUE}https://discord.gg/26Nf8rHvaj${RESET}"' EXIT
+trap 'echo -e "${YELLOW}Need help? Open an issue at: ${BLUE}https://github.com/${GITHUB_REPO}/issues${RESET}"' EXIT
 
 msg_info() { echo -e "${BLUE}[*]${RESET} $*"; }
 msg_ok() { echo -e "${GREEN}[✓] $*${RESET}"; }

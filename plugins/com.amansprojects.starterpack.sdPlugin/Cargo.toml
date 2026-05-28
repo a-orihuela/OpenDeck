@@ -1,6 +1,6 @@
 [package]
 name = "opendeck-starterpack"
-authors = ["Aman Khanna (nekename)"]
+authors = ["Abraham Orihuela Mayor (a-orihuela)"]
 license = "GPL-3.0-or-later"
 edition = "2024"
 
