@@ -159,10 +159,6 @@ async fn main() {
 				let _ = hide_window(app.handle());
 			}
 
-			let old = app.path().config_dir().unwrap().join("com.amansprojects.opendeck");
-			if old.exists() {
-				let _ = std::fs::rename(old, app.path().app_config_dir().unwrap());
-			}
 
 			let mut settings = store::get_settings();
 			use std::cmp::Ordering;
@@ -332,7 +328,7 @@ async fn main() {
 						let _ = show_window(app);
 					}
 				})
-				.dbus_id("me.amankhanna.opendeck")
+				.dbus_id("OPENDECK_APP_ID")
 				.build(),
 		)
 		.plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--hide"])))

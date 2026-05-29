@@ -2,7 +2,7 @@
 
 const ROOT = new URL("../", import.meta.url);
 const METAINFO = new URL("../src-tauri/bundle/opendeck.metainfo.xml", import.meta.url);
-const STARTERPACK_MANIFEST = new URL("../plugins/com.amansprojects.starterpack.sdPlugin/assets/manifest.json", import.meta.url);
+const STARTERPACK_MANIFEST = new URL("../plugins/com.opendeck.starterpack.sdPlugin/assets/manifest.json", import.meta.url);
 
 function usage(): never {
 	console.error("Usage: deno run -A scripts/bump_version.ts <version>");

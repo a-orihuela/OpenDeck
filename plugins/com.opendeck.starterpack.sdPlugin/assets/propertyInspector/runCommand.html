@@ -14,10 +14,11 @@
 					}));
 				};
 
-				if (inActionInfo.payload.controller == "Encoder") {
+				const isEncoder = inActionInfo.payload.controller == "Encoder";
+				if (isEncoder) {
 					document.getElementById("encoder").style.display = "block";
-					document.getElementById("down-label").innerText = "Dial down";
-					document.getElementById("up-label").innerText = "Dial up";
+					document.getElementById("down-label").innerText = "Dial press";
+					document.getElementById("up-label").innerText = "Dial release";
 				}
 
 				const down = document.getElementById("down");
@@ -50,29 +51,41 @@
 	</head>
 	<body>
 		<div class="sdpi-item">
-			<div class="sdpi-item-label" id="down-label">Key down</div>
-			<input id="down" oninput="update()" class="sdpi-item-value" style="font-family: monospace" />
+			<div class="sdpi-item-label" id="down-label">On press</div>
+			<input id="down" oninput="update()" class="sdpi-item-value" style="font-family: monospace"
+				placeholder='e.g. notify-send "Done!" or xdg-open ~/Documents' />
 		</div>
-		<div class="sdpi-item">
-			<div class="sdpi-item-label" id="up-label">Key up</div>
-			<input id="up" oninput="update()" class="sdpi-item-value" style="font-family: monospace" />
+		<p style="padding: 0 0.75rem; font-size: 0.8em; color: #888; margin-top: -4px">
+			Command to run when the key is <strong>pressed</strong>.
+		</p>
+
+		<div class="sdpi-item" style="margin-top: 8px">
+			<div class="sdpi-item-label" id="up-label">On release</div>
+			<input id="up" oninput="update()" class="sdpi-item-value" style="font-family: monospace"
+				placeholder="Optional — runs when key is released" />
 		</div>
+
 		<div id="encoder" style="display: none">
-			<div class="sdpi-item">
+			<div class="sdpi-item" style="margin-top: 8px">
 				<div class="sdpi-item-label">Dial rotate</div>
-				<input id="rotate" oninput="update()" class="sdpi-item-value" style="font-family: monospace" />
+				<input id="rotate" oninput="update()" class="sdpi-item-value" style="font-family: monospace"
+					placeholder="e.g. pactl set-sink-volume @DEFAULT_SINK@ %d%" />
 			</div>
-			<p style="padding-left: 0.75rem; padding-right: 0.75rem">
-				Usages of <code>%d</code> will be substituted with the number of ticks turned, where negative values signify counterclockwise rotation and positive values signify clockwise rotation.
+			<p style="padding: 0 0.75rem; font-size: 0.8em; color: #888; margin-top: -4px">
+				Use <code>%d</code> for rotation ticks (negative = left, positive = right).<br/>
+				Example: <code>pactl set-sink-volume @DEFAULT_SINK@ %d%</code>
 			</p>
 		</div>
-		<br />
+
+		<hr style="margin: 12px 0; border-color: #444" />
+
 		<div class="sdpi-item">
-			<div class="sdpi-item-label">Write to path</div>
-			<input id="file" oninput="update()" class="sdpi-item-value" style="font-family: monospace" />
+			<div class="sdpi-item-label">Save output to</div>
+			<input id="file" oninput="update()" class="sdpi-item-value" style="font-family: monospace"
+				placeholder="Optional — file path to save command output" />
 		</div>
 		<div class="sdpi-item">
-			<div class="sdpi-item-label">Show on key</div>
+			<div class="sdpi-item-label">Show output on key</div>
 			<input id="show" type="checkbox" oninput="update()" class="sdpi-item-value" />
 			<label for="show"><span></span></label>
 		</div>

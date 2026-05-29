@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<script>
+			let update = () => {};
+
+			// ── Key code → enigo Key name mapping ──────────────────────────────────────
+			const CODE_TO_ENIGO = {
+				// Letters
+				KeyA:"KeyA",KeyB:"KeyB",KeyC:"KeyC",KeyD:"KeyD",KeyE:"KeyE",KeyF:"KeyF",
+				KeyG:"KeyG",KeyH:"KeyH",KeyI:"KeyI",KeyJ:"KeyJ",KeyK:"KeyK",KeyL:"KeyL",
+				KeyM:"KeyM",KeyN:"KeyN",KeyO:"KeyO",KeyP:"KeyP",KeyQ:"KeyQ",KeyR:"KeyR",
+				KeyS:"KeyS",KeyT:"KeyT",KeyU:"KeyU",KeyV:"KeyV",KeyW:"KeyW",KeyX:"KeyX",
+				KeyY:"KeyY",KeyZ:"KeyZ",
+				// Digits
+				Digit0:"Num0",Digit1:"Num1",Digit2:"Num2",Digit3:"Num3",Digit4:"Num4",
+				Digit5:"Num5",Digit6:"Num6",Digit7:"Num7",Digit8:"Num8",Digit9:"Num9",
+				// Function keys
+				F1:"F1",F2:"F2",F3:"F3",F4:"F4",F5:"F5",F6:"F6",F7:"F7",F8:"F8",
+				F9:"F9",F10:"F10",F11:"F11",F12:"F12",
+				// Common keys
+				Space:"Space",Enter:"Return",Tab:"Tab",Backspace:"BackSpace",Escape:"Escape",
+				Delete:"Delete",Insert:"Insert",Home:"Home",End:"End",
+				PageUp:"PageUp",PageDown:"PageDown",
+				ArrowUp:"UpArrow",ArrowDown:"DownArrow",ArrowLeft:"LeftArrow",ArrowRight:"RightArrow",
+				// Symbols
+				Minus:"Minus",Equal:"Equal",BracketLeft:"LeftBracket",BracketRight:"RightBracket",
+				Backslash:"BackSlash",Semicolon:"SemiColon",Quote:"Apostrophe",
+				Backquote:"Grave",Comma:"Comma",Period:"Period",Slash:"Slash",
+			};
+
+			const MODIFIER_CODES = ["ControlLeft","ControlRight","ShiftLeft","ShiftRight","AltLeft","AltRight","MetaLeft","MetaRight"];
+
+			// Build a friendly label for a recorded combo.
+			function comboLabel(mods, key) {
+				const parts = [];
+				if (mods.includes("ControlLeft") || mods.includes("ControlRight")) parts.push("Ctrl");
+				if (mods.includes("ShiftLeft") || mods.includes("ShiftRight")) parts.push("Shift");
+				if (mods.includes("AltLeft") || mods.includes("AltRight")) parts.push("Alt");
+				if (mods.includes("MetaLeft") || mods.includes("MetaRight")) parts.push("Meta");
+				if (key) parts.push(key.replace(/^Key/, "").replace(/^Num/, ""));
+				return parts.join(" + ");
+			}
+
+			// Build a RON DSL string from modifiers + main key.
+			function comboDsl(mods, key) {
+				const parts = [];
+				const pressedMods = [];
+				if (mods.includes("ControlLeft") || mods.includes("ControlRight")) pressedMods.push("ControlLeft");
+				if (mods.includes("ShiftLeft") || mods.includes("ShiftRight")) pressedMods.push("ShiftLeft");
+				if (mods.includes("AltLeft") || mods.includes("AltRight")) pressedMods.push("AltLeft");
+				if (mods.includes("MetaLeft") || mods.includes("MetaRight")) pressedMods.push("MetaLeft");
+
+				for (const mod of pressedMods) parts.push(`k(${mod},Press)`);
+				if (key && CODE_TO_ENIGO[key]) parts.push(`k(${CODE_TO_ENIGO[key]},Click)`);
+				for (const mod of [...pressedMods].reverse()) parts.push(`k(${mod},Release)`);
+				return parts.join(" ");
+			}
+
+			// Set up a key recorder on a button + hidden input pair.
+			function setupRecorder(btnId, inputId, displayId) {
+				const btn = document.getElementById(btnId);
+				const input = document.getElementById(inputId);
+				const display = document.getElementById(displayId);
+
+				let recording = false;
+				let pressedMods = [];
+				let mainKey = null;
+
+				btn.addEventListener("click", () => {
+					recording = true;
+					pressedMods = [];
+					mainKey = null;
+					btn.textContent = "🎙 Press your shortcut…";
+					btn.style.background = "#c0392b";
+				});
+
+				document.addEventListener("keydown", (e) => {
+					if (!recording) return;
+					e.preventDefault();
+					e.stopPropagation();
+					if (MODIFIER_CODES.includes(e.code)) {
+						if (!pressedMods.includes(e.code)) pressedMods.push(e.code);
+					} else {
+						mainKey = e.code;
+					}
+				}, true);
+
+				document.addEventListener("keyup", (e) => {
+					if (!recording) return;
+					e.preventDefault();
+					e.stopPropagation();
+
+					// Commit when a non-modifier is released, or Escape cancels.
+					if (e.code === "Escape") {
+						recording = false;
+						btn.textContent = input.value ? "✏ Change" : "▶ Click to record";
+						btn.style.background = "";
+						return;
+					}
+					if (!MODIFIER_CODES.includes(e.code)) {
+						recording = false;
+						const dsl = comboDsl(pressedMods, mainKey);
+						const label = comboLabel(pressedMods, mainKey);
+						input.value = dsl;
+						display.textContent = label || dsl;
+						btn.textContent = "✏ Change";
+						btn.style.background = "";
+						update();
+					}
+				}, true);
+			}
+
+			function connectElgatoStreamDeckSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
+				const websocket = new WebSocket("ws://localhost:" + inPort);
+				inActionInfo = JSON.parse(inActionInfo);
+				websocket.onopen = () => {
+					websocket.send(JSON.stringify({
+						event: inRegisterEvent,
+						uuid: inPropertyInspectorUUID,
+					}));
+				};
+
+				const isEncoder = inActionInfo.payload.controller == "Encoder";
+				if (isEncoder) {
+					document.getElementById("encoder").style.display = "block";
+					document.getElementById("down-section").style.display = "none";
+					document.getElementById("up-section").style.display = "none";
+				}
+
+				const down = document.getElementById("down");
+				down.value = inActionInfo.payload.settings.down ?? "";
+				document.getElementById("down-display").textContent = down.value;
+
+				const up = document.getElementById("up");
+				up.value = inActionInfo.payload.settings.up ?? "";
+				document.getElementById("up-display").textContent = up.value;
+
+				const anticlockwise = document.getElementById("anticlockwise");
+				anticlockwise.value = inActionInfo.payload.settings.anticlockwise ?? "";
+				document.getElementById("acw-display").textContent = anticlockwise.value;
+
+				const clockwise = document.getElementById("clockwise");
+				clockwise.value = inActionInfo.payload.settings.clockwise ?? "";
+				document.getElementById("cw-display").textContent = clockwise.value;
+
+				setupRecorder("down-btn", "down", "down-display");
+				setupRecorder("up-btn",   "up",   "up-display");
+				setupRecorder("acw-btn",  "anticlockwise", "acw-display");
+				setupRecorder("cw-btn",   "clockwise", "cw-display");
+
+				update = () => {
+					websocket.send(JSON.stringify({
+						event: "setSettings",
+						context: inActionInfo.context,
+						payload: {
+							down: down.value,
+							up: up.value,
+							anticlockwise: anticlockwise.value,
+							clockwise: clockwise.value,
+						},
+					}));
+				};
+
+				// Advanced mode toggle
+				document.getElementById("advanced-toggle").addEventListener("change", (e) => {
+					document.getElementById("advanced-section").style.display = e.target.checked ? "block" : "none";
+				});
+
+				websocket.onmessage = (event) => {
+					const data = JSON.parse(event.data);
+					if (data.event == "sendToPropertyInspector") {
+						const errEl = document.getElementById("error");
+						if (data.payload.error) {
+							errEl.textContent = "⚠ Error: " + data.payload.error;
+							errEl.style.display = "block";
+						} else {
+							errEl.style.display = "none";
+						}
+					}
+				};
+			}
+		</script>
+		<link rel="stylesheet" href="sdpi.css" />
+		<style>
+			.recorder-row { display: flex; align-items: center; gap: 8px; margin: 4px 12px; }
+			.recorder-display { flex: 1; font-family: monospace; color: #ccc; font-size: 0.9em; min-height: 1.2em; }
+			.recorder-btn { padding: 3px 10px; font-size: 0.8em; cursor: pointer; border-radius: 4px; border: 1px solid #555; background: #444; color: #eee; white-space: nowrap; }
+			.recorder-btn:hover { background: #555; }
+			.hidden-input { display: none; }
+		</style>
+	</head>
+	<body>
+		<p style="padding: 0 0.75rem; font-size: 0.8em; color: #888">
+			Simulates keyboard shortcuts on your computer. Click the button and press your desired shortcut.
+		</p>
+
+		<div id="error" style="display: none; padding: 8px 12px; color: lightcoral; font-size: 0.85em"></div>
+
+		<div id="down-section">
+			<div class="sdpi-item-label" style="padding: 4px 12px 2px; font-weight: bold; color: #bbb">On press</div>
+			<div class="recorder-row">
+				<span id="down-display" class="recorder-display">Not set</span>
+				<button id="down-btn" class="recorder-btn">▶ Click to record</button>
+			</div>
+			<input id="down" class="hidden-input" />
+		</div>
+
+		<div id="up-section" style="margin-top: 8px">
+			<div class="sdpi-item-label" style="padding: 4px 12px 2px; font-weight: bold; color: #bbb">On release (optional)</div>
+			<div class="recorder-row">
+				<span id="up-display" class="recorder-display">Not set</span>
+				<button id="up-btn" class="recorder-btn">▶ Click to record</button>
+			</div>
+			<input id="up" class="hidden-input" />
+		</div>
+
+		<div id="encoder" style="display: none; margin-top: 8px">
+			<div class="sdpi-item-label" style="padding: 4px 12px 2px; font-weight: bold; color: #bbb">Rotate left</div>
+			<div class="recorder-row">
+				<span id="acw-display" class="recorder-display">Not set</span>
+				<button id="acw-btn" class="recorder-btn">▶ Click to record</button>
+			</div>
+			<input id="anticlockwise" class="hidden-input" />
+
+			<div class="sdpi-item-label" style="padding: 8px 12px 2px; font-weight: bold; color: #bbb">Rotate right</div>
+			<div class="recorder-row">
+				<span id="cw-display" class="recorder-display">Not set</span>
+				<button id="cw-btn" class="recorder-btn">▶ Click to record</button>
+			</div>
+			<input id="clockwise" class="hidden-input" />
+		</div>
+
+		<div style="margin: 12px 12px 4px; display: flex; align-items: center; gap: 6px; font-size: 0.8em; color: #888">
+			<input type="checkbox" id="advanced-toggle" style="margin: 0" />
+			<label for="advanced-toggle">Advanced mode (edit raw DSL)</label>
+		</div>
+
+		<div id="advanced-section" style="display: none">
+			<details open>
+				<summary style="padding: 4px 12px; font-size: 0.85em; color: #aaa; cursor: pointer">DSL reference</summary>
+				<div style="padding: 4px 12px; font-size: 0.8em; color: #aaa; line-height: 1.6">
+					<code>t("hello")</code> — type text<br/>
+					<code>k(ControlLeft,Press) k(KeyC,Click) k(ControlLeft,Release)</code> — Ctrl+C<br/>
+					<code>b(Left)</code> — left mouse click &nbsp; <code>s(3)</code> — scroll 3 lines<br/>
+					<code>uni('€')</code> — unicode character
+				</div>
+			</details>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<script>
+			let update = () => {};
+
+			function connectElgatoStreamDeckSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
+				const websocket = new WebSocket("ws://localhost:" + inPort);
+				inActionInfo = JSON.parse(inActionInfo);
+				websocket.onopen = () => {
+					websocket.send(JSON.stringify({ event: inRegisterEvent, uuid: inPropertyInspectorUUID }));
+				};
+
+				const s = inActionInfo.payload.settings;
+				const work     = document.getElementById("work");
+				const brk      = document.getElementById("break");
+				const longbrk  = document.getElementById("longbreak");
+				const sessions = document.getElementById("sessions");
+
+				work.value     = s.work_minutes     ?? 25;
+				brk.value      = s.break_minutes    ?? 5;
+				longbrk.value  = s.long_break_minutes ?? 15;
+				sessions.value = s.sessions_before_long_break ?? 4;
+
+				function refreshPreview() {
+					const w = parseInt(work.value)     || 25;
+					const b = parseInt(brk.value)      || 5;
+					const l = parseInt(longbrk.value)  || 15;
+					const n = parseInt(sessions.value) || 4;
+					let parts = [];
+					for (let i = 0; i < n; i++) {
+						parts.push(`Work ${w}m`);
+						if (i < n - 1) parts.push(`Break ${b}m`);
+					}
+					parts.push(`Long break ${l}m`);
+					document.getElementById("preview").textContent = parts.join(" → ") + " → repeat";
+				}
+
+				update = () => {
+					refreshPreview();
+					websocket.send(JSON.stringify({
+						event: "setSettings",
+						context: inActionInfo.context,
+						payload: {
+							work_minutes:               parseInt(work.value)     || 25,
+							break_minutes:              parseInt(brk.value)      || 5,
+							long_break_minutes:         parseInt(longbrk.value)  || 15,
+							sessions_before_long_break: parseInt(sessions.value) || 4,
+						},
+					}));
+				};
+
+				refreshPreview();
+			}
+		</script>
+		<link rel="stylesheet" href="sdpi.css" />
+	</head>
+	<body>
+		<p style="padding: 0 0.75rem; font-size: 0.8em; color: #888">
+			Press to <strong>start / pause</strong>. Hold for 1 second to <strong>reset</strong>.
+			Remaining time is shown on the key.
+		</p>
+
+		<div class="sdpi-item">
+			<div class="sdpi-item-label">Work (min)</div>
+			<input id="work" type="number" min="1" max="120" oninput="update()" class="sdpi-item-value" />
+		</div>
+		<div class="sdpi-item">
+			<div class="sdpi-item-label">Break (min)</div>
+			<input id="break" type="number" min="1" max="60" oninput="update()" class="sdpi-item-value" />
+		</div>
+		<div class="sdpi-item">
+			<div class="sdpi-item-label">Long break (min)</div>
+			<input id="longbreak" type="number" min="1" max="120" oninput="update()" class="sdpi-item-value" />
+		</div>
+		<div class="sdpi-item">
+			<div class="sdpi-item-label">Sessions until long break</div>
+			<input id="sessions" type="number" min="1" max="10" oninput="update()" class="sdpi-item-value" />
+		</div>
+
+		<p style="padding: 8px 0.75rem 2px; font-size: 0.75em; color: #666; font-weight: bold">Cycle preview</p>
+		<p id="preview" style="padding: 0 0.75rem; font-size: 0.75em; color: #888; word-break: break-word; line-height: 1.6"></p>
+	</body>
+</html>

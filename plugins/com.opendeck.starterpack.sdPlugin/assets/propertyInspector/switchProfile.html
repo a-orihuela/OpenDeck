@@ -58,23 +58,40 @@
 		<link rel="stylesheet" href="sdpi.css" />
 	</head>
 	<body>
+		<p style="padding: 0 0.75rem; font-size: 0.8em; color: #888">
+			Switches to a different profile when the key is pressed — for example, from <em>Games</em> to <em>Work</em>.
+			Profiles are created using the dropdown at the top of OpenDeck.
+		</p>
+
 		<div class="sdpi-item">
-			<div class="sdpi-item-label">Device ID</div>
-			<input id="device" list="devices" type="text" oninput="update()" class="sdpi-item-value" />
+			<div class="sdpi-item-label">Device</div>
+			<input id="device" list="devices" type="text" oninput="update()" class="sdpi-item-value"
+				placeholder="Leave empty to use current device" />
 			<datalist id="devices"></datalist>
 		</div>
-		<div class="sdpi-item">
+		<p style="padding: 0 0.75rem; font-size: 0.8em; color: #888; margin-top: -4px">
+			Leave empty to switch profiles on the current device. IDs look like <code>sd-XXXXXX</code>.
+		</p>
+
+		<div class="sdpi-item" style="margin-top: 8px">
 			<div class="sdpi-item-label" id="up-label">Profile</div>
-			<input id="profile" oninput="update()" class="sdpi-item-value" />
+			<input id="profile" oninput="update()" class="sdpi-item-value"
+				placeholder="e.g. Games, Work, Default" />
 		</div>
+		<p style="padding: 0 0.75rem; font-size: 0.8em; color: #888; margin-top: -4px">
+			Name of the profile to switch to (case-sensitive).
+		</p>
+
 		<div id="encoder" style="display: none">
-			<div class="sdpi-item">
-				<div class="sdpi-item-label">Dial rotate anticlockwise</div>
-				<input id="anticlockwise" oninput="update()" class="sdpi-item-value" />
+			<div class="sdpi-item" style="margin-top: 8px">
+				<div class="sdpi-item-label">Rotate left</div>
+				<input id="anticlockwise" oninput="update()" class="sdpi-item-value"
+					placeholder="Profile for left rotation" />
 			</div>
 			<div class="sdpi-item">
-				<div class="sdpi-item-label">Dial rotate clockwise</div>
-				<input id="clockwise" oninput="update()" class="sdpi-item-value" />
+				<div class="sdpi-item-label">Rotate right</div>
+				<input id="clockwise" oninput="update()" class="sdpi-item-value"
+					placeholder="Profile for right rotation" />
 			</div>
 		</div>
 	</body>

@@ -1,7 +1,7 @@
 {
 	"folders": [
 		{ "path": ".." },
-		{ "path": "../plugins/com.amansprojects.starterpack.sdPlugin" }
+		{ "path": "../plugins/com.opendeck.starterpack.sdPlugin" }
 	],
 	"settings": {
 		"editor.insertSpaces": false,

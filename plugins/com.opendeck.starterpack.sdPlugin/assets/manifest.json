@@ -1,0 +1,186 @@
+{
+	"Name": "OpenDeck Starter Pack",
+	"Description": "OpenDeck built-in actions",
+	"Author": "Abraham Orihuela Mayor (a-orihuela)",
+	"Version": "2.12.0",
+	"CodePaths": {
+		"x86_64-pc-windows-msvc": "x86_64-pc-windows-msvc/bin/opendeck-starterpack.exe",
+		"x86_64-apple-darwin": "x86_64-apple-darwin/bin/opendeck-starterpack",
+		"aarch64-apple-darwin": "aarch64-apple-darwin/bin/opendeck-starterpack",
+		"x86_64-unknown-linux-gnu": "x86_64-unknown-linux-gnu/bin/opendeck-starterpack",
+		"aarch64-unknown-linux-gnu": "aarch64-unknown-linux-gnu/bin/opendeck-starterpack"
+	},
+	"CodePathWin": "x86_64-pc-windows-msvc/bin/opendeck-starterpack.exe",
+	"CodePathMac": "x86_64-apple-darwin/bin/opendeck-starterpack",
+	"CodePathLin": "x86_64-unknown-linux-gnu/bin/opendeck-starterpack",
+	"Icon": "icons/plugin",
+	"Category": "OpenDeck",
+	"OS": [
+		{
+			"Platform": "mac",
+			"MinimumVersion": "10.11"
+		},
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		},
+		{
+			"Platform": "linux"
+		}
+	],
+	"Capabilities": ["switch_profile", "device_brightness"],
+	"Actions": [
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Run Command",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Run a shell command on key press or release",
+			"UUID": "opendeck.builtin.runcommand",
+			"PropertyInspectorPath": "propertyInspector/runCommand.html"
+		},
+		{
+			"Icon": "icons/openUrl",
+			"Name": "Open URL",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Open a URL in the default browser",
+			"UUID": "opendeck.builtin.openurl",
+			"PropertyInspectorPath": "propertyInspector/openUrl.html"
+		},
+		{
+			"Icon": "icons/inputSimulation",
+			"Name": "Simulate Input",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Simulate keyboard shortcuts or text input",
+			"UUID": "opendeck.builtin.inputsimulation",
+			"PropertyInspectorPath": "propertyInspector/inputSimulation.html"
+		},
+		{
+			"Icon": "icons/switchProfile",
+			"Name": "Switch Profile",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Switch to a different profile (e.g. Games → Work)",
+			"UUID": "opendeck.builtin.switchprofile",
+			"PropertyInspectorPath": "propertyInspector/switchProfile.html"
+		},
+		{
+			"Icon": "icons/deviceBrightness",
+			"Name": "Brightness Up",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Increase the Stream Deck brightness",
+			"UUID": "opendeck.builtin.brightnessup",
+			"PropertyInspectorPath": "propertyInspector/brightnessUp.html"
+		},
+		{
+			"Icon": "icons/deviceBrightness",
+			"Name": "Brightness Down",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Decrease the Stream Deck brightness",
+			"UUID": "opendeck.builtin.brightnessdown",
+			"PropertyInspectorPath": "propertyInspector/brightnessDown.html"
+		},
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Volume Up",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Increase system volume",
+			"UUID": "opendeck.builtin.volumeup"
+		},
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Volume Down",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Decrease system volume",
+			"UUID": "opendeck.builtin.volumedown"
+		},
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Mute",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Toggle system mute",
+			"UUID": "opendeck.builtin.mute"
+		},
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Play / Pause",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Play or pause media playback",
+			"UUID": "opendeck.builtin.playpause"
+		},
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Next Track",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Skip to the next media track",
+			"UUID": "opendeck.builtin.nexttrack"
+		},
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Previous Track",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Go back to the previous media track",
+			"UUID": "opendeck.builtin.prevtrack"
+		},
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Lock Screen",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Lock the screen / session",
+			"UUID": "opendeck.builtin.lockscreen"
+		},
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Sleep",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Suspend the computer",
+			"UUID": "opendeck.builtin.sleep"
+		},
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Screenshot",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad", "Encoder"],
+			"SupportedInMultiActions": true,
+			"Tooltip": "Take a screenshot",
+			"UUID": "opendeck.builtin.screenshot",
+			"PropertyInspectorPath": "propertyInspector/screenshot.html"
+		},
+		{
+			"Icon": "icons/runCommand",
+			"Name": "Pomodoro Timer",
+			"States": [{ "Image": "actionDefaultImage" }],
+			"Controllers": ["Keypad"],
+			"SupportedInMultiActions": false,
+			"Tooltip": "Pomodoro timer shown on the key. Press to start/pause, hold to reset.",
+			"UUID": "opendeck.builtin.pomodoro",
+			"PropertyInspectorPath": "propertyInspector/pomodoro.html"
+		}
+	]
+}

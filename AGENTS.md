@@ -33,7 +33,7 @@ src/                        # SvelteKit frontend
 ├── components/             # Svelte UI components
 └── routes/                 # SvelteKit routing (currently single-page app)
 
-plugins/com.amansprojects.starterpack.sdPlugin/  # Plugin with basic actions
+plugins/com.opendeck.starterpack.sdPlugin/  # Plugin with basic actions
 ├── assets/manifest.json                         # Plugin metadata
 ├── assets/propertyInspector/                    # HTML UIs for action settings
 └── src/                                         # Rust plugin using openaction crate

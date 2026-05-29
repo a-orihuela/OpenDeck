@@ -23,7 +23,7 @@ pub struct SwitchProfileSettings {
 pub struct SwitchProfileAction;
 #[async_trait]
 impl Action for SwitchProfileAction {
-	const UUID: &'static str = "com.amansprojects.starterpack.switchprofile";
+	const UUID: &'static str = "opendeck.builtin.switchprofile";
 	type Settings = SwitchProfileSettings;
 
 	async fn key_up(&self, instance: &Instance, settings: &Self::Settings) -> OpenActionResult<()> {
