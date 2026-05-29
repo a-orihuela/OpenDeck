@@ -143,16 +143,16 @@ pub async fn spawn_plugin(
 
 		let info = super::info_param::make_info(plugin_uuid.clone(), manifest_version, false).await;
 		window.eval(format!(
-			r#"const opendeckInit = () => {{
+			r#"const omegadeckInit = () => {{
 				try {{
 					if (document.readyState !== "complete") throw new Error("not ready");
 					if (typeof connectOpenActionSocket === "function") connectOpenActionSocket({port}, "{uuid}", "{event}", `{info}`);
 					else connectElgatoStreamDeckSocket({port}, "{uuid}", "{event}", `{info}`);
 				}} catch (e) {{
-					setTimeout(opendeckInit, 10);
+					setTimeout(omegadeckInit, 10);
 				}}
 			}};
-			opendeckInit();
+			omegadeckInit();
 			"#,
 			port = *PORT_BASE,
 			uuid = plugin_uuid,

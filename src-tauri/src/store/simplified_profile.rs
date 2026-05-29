@@ -151,7 +151,7 @@ impl DiskActionInstance {
 		profile = profile[..profile.len() - 5].to_owned();
 
 		let reconstruct_path = |value: &str| -> String {
-			if !(value.is_empty() || value.starts_with("data:") || value.starts_with("opendeck/")) {
+			if !(value.is_empty() || value.starts_with("data:") || value.starts_with("omegadeck/")) {
 				config_dir.join(PathBuf::from_slash(value)).to_string_lossy().into_owned()
 			} else {
 				value.to_owned()

@@ -117,7 +117,7 @@
 
 	let oldValue: string;
 	$: {
-		if (value == "opendeck_edit_profiles") {
+		if (value == "omegadeck_edit_profiles") {
 			if (oldValue) showPopup = true;
 			value = oldValue;
 		} else if (value && value != oldValue && (!profile || profile.id != value)) {
@@ -137,14 +137,14 @@
 		applicationProfiles = await getApplicationProfiles();
 	})();
 	onApplications((apps) => applications = apps);
-	let applicationsAddAppName: string = "opendeck_select_application";
-	let applicationsAddProfile: string = "opendeck_select_profile";
+	let applicationsAddAppName: string = "omegadeck_select_application";
+	let applicationsAddProfile: string = "omegadeck_select_profile";
 	$: {
-		if (applicationsAddAppName != "opendeck_select_application" && applicationsAddProfile != "opendeck_select_profile") {
+		if (applicationsAddAppName != "omegadeck_select_application" && applicationsAddProfile != "omegadeck_select_profile") {
 			applicationProfiles[applicationsAddAppName] ||= {};
 			applicationProfiles[applicationsAddAppName][device.id] = applicationsAddProfile;
-			applicationsAddAppName = "opendeck_select_application";
-			applicationsAddProfile = "opendeck_select_profile";
+			applicationsAddAppName = "omegadeck_select_application";
+			applicationsAddProfile = "omegadeck_select_profile";
 		}
 	}
 	$: {
@@ -178,7 +178,7 @@
 				{/each}
 			{/if}
 		{/each}
-		<option value="opendeck_edit_profiles">Edit...</option>
+		<option value="omegadeck_edit_profiles">Edit...</option>
 	</select>
 </div>
 
@@ -280,12 +280,12 @@
 	<span class="text-sm text-neutral-400">The 'default profile' will activate when the focussed application has no profile associated with it.</span>
 
 	<table class="w-full text-neutral-300 divide-y divide-neutral-500!">
-		{#each Object.entries(applicationProfiles).sort((a, b) => a[0] == "opendeck_default" ? -1 : b[0] == "opendeck_default" ? 1 : a[0].localeCompare(b[0])) as [appName, devices]}
+		{#each Object.entries(applicationProfiles).sort((a, b) => a[0] == "omegadeck_default" ? -1 : b[0] == "omegadeck_default" ? 1 : a[0].localeCompare(b[0])) as [appName, devices]}
 			{#if devices[device.id]}
 				<tr class="h-12">
-					<td>{appName == "opendeck_default" ? "Default profile" : appName}:</td>
+					<td>{appName == "omegadeck_default" ? "Default profile" : appName}:</td>
 					<td class="select-wrapper">
-						<select bind:value={applicationProfiles[appName][device.id]} class="w-full" aria-label="{appName == 'opendeck_default' ? 'Default profile' : appName} profile">
+						<select bind:value={applicationProfiles[appName][device.id]} class="w-full" aria-label="{appName == 'omegadeck_default' ? 'Default profile' : appName} profile">
 							{#each Object.entries(folders) as [id, profiles]}
 								{#if id && profiles.length}
 									<optgroup label={id}>
@@ -309,9 +309,9 @@
 		<tr class="h-12">
 			<td class="w-48 select-wrapper">
 				<select bind:value={applicationsAddAppName} class="w-full" aria-label="Select application">
-					<option selected disabled value="opendeck_select_application">Select application...</option>
-					{#if !applicationProfiles["opendeck_default"] || !applicationProfiles["opendeck_default"][device.id]}
-						<option value="opendeck_default">Default profile</option>
+					<option selected disabled value="omegadeck_select_application">Select application...</option>
+					{#if !applicationProfiles["omegadeck_default"] || !applicationProfiles["omegadeck_default"][device.id]}
+						<option value="omegadeck_default">Default profile</option>
 						{#if applications.filter((appName) => !applicationProfiles[appName] || !applicationProfiles[appName][device.id]).length > 0}
 							<option disabled>──────────</option>
 						{/if}
@@ -325,7 +325,7 @@
 			</td>
 			<td class="w-96 select-wrapper">
 				<select bind:value={applicationsAddProfile} class="w-full" aria-label="Select profile">
-					<option selected disabled value="opendeck_select_profile">Select profile...</option>
+					<option selected disabled value="omegadeck_select_profile">Select profile...</option>
 					{#each Object.entries(folders) as [id, profiles]}
 						{#if id && profiles.length}
 							<optgroup label={id}>

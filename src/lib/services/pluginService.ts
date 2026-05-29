@@ -103,7 +103,7 @@ export async function fetchTotalDownloadCount(repo: string): Promise<number> {
 
 // ── Deep-link URL parsing ─────────────────────────────────────────────────────
 
-/** Extracts a plugin id from an opendeck:// installPlugin deep-link URL. */
+/** Extracts a plugin id from an omegadeck:// installPlugin deep-link URL. */
 export function parseInstallPluginUrl(url: string): string | null {
 	if (!url.includes("installPlugin/")) return null;
 	return url.split("installPlugin/")[1] ?? null;

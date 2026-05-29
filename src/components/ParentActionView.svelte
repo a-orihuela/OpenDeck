@@ -121,7 +121,7 @@
 	class="flex flex-col h-128 overflow-auto"
 	on:click={() => $inspectedInstance = null}
 	role="list"
-	aria-label="{parentUuid == 'opendeck.toggleaction' ? 'Toggle Action' : 'Multi Action'} children"
+	aria-label="{parentUuid == 'omegadeck.toggleaction' ? 'Toggle Action' : 'Multi Action'} children"
 	on:keydown={handleListKeydown}
 >
 	{#each children as instance, index}

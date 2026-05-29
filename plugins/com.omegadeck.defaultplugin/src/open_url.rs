@@ -14,7 +14,7 @@ pub struct OpenUrlSettings {
 pub struct OpenUrlAction;
 #[async_trait]
 impl Action for OpenUrlAction {
-	const UUID: &'static str = "opendeck.builtin.openurl";
+	const UUID: &'static str = "omegadeck.builtin.openurl";
 	type Settings = OpenUrlSettings;
 
 	async fn key_down(

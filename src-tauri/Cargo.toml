@@ -1,11 +1,11 @@
 [package]
-name = "opendeck"
+name = "omegadeck"
 version = "2.12.0"
 description = "Use stream controllers"
 authors = ["Abraham Orihuela Mayor (a-orihuela)"]
 license = "GPL-3.0-or-later"
-repository = "https://github.com/a-orihuela/OpenDeck"
-default-run = "opendeck"
+repository = "https://github.com/a-orihuela/OmegaDeck"
+default-run = "omegadeck"
 edition = "2024"
 
 [[bin]]

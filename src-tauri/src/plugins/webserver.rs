@@ -74,10 +74,10 @@ pub async fn init_webserver(prefix: PathBuf) {
 
 			let mut content = tokio::fs::read_to_string(path).await.unwrap_or_default();
 			content += r#"
-				<div id="opendeck_iframe_container" style="position: absolute; z-index: 100; top: 0; left: 0; width: 100%; height: 100%; display: none;"></div>
+				<div id="omegadeck_iframe_container" style="position: absolute; z-index: 100; top: 0; left: 0; width: 100%; height: 100%; display: none;"></div>
 				<script>
-					const opendeck_window_open = window.open;
-					const opendeck_iframe_container = document.getElementById("opendeck_iframe_container");
+					const omegadeck_window_open = window.open;
+					const omegadeck_iframe_container = document.getElementById("omegadeck_iframe_container");
 
 					window.addEventListener("message", (event) => {
 						const data = event.data;
@@ -87,8 +87,8 @@ pub async fn init_webserver(prefix: PathBuf) {
 							else connectElgatoStreamDeckSocket(...data.payload);
 						} else if (data.event == "windowClosed") {
 							event.stopImmediatePropagation();
-							if (opendeck_iframe_container.firstElementChild) opendeck_iframe_container.firstElementChild.remove();
-							opendeck_iframe_container.style.display = "none";
+							if (omegadeck_iframe_container.firstElementChild) omegadeck_iframe_container.firstElementChild.remove();
+							omegadeck_iframe_container.style.display = "none";
 						}
 					});
 
@@ -105,35 +105,35 @@ pub async fn init_webserver(prefix: PathBuf) {
 							iframe.contentWindow.close = () => { iframe.contentWindow.onbeforeunload(); iframe.remove(); };
 							iframe.contentWindow.document.body.style.overflowY = "auto";
 						};
-						iframe.src = url.startsWith("http") ? url : url + "|opendeck_property_inspector_child";
-						if (opendeck_iframe_container.firstElementChild) opendeck_iframe_container.firstElementChild.remove();
-						opendeck_iframe_container.appendChild(iframe);
-						opendeck_iframe_container.style.display = "flex";
+						iframe.src = url.startsWith("http") ? url : url + "|omegadeck_property_inspector_child";
+						if (omegadeck_iframe_container.firstElementChild) omegadeck_iframe_container.firstElementChild.remove();
+						omegadeck_iframe_container.appendChild(iframe);
+						omegadeck_iframe_container.style.display = "flex";
 						top.postMessage({ event: "windowOpened", payload: window.name }, "*");
 						return iframe.contentWindow;
 					};
 
-					const opendeck_window_fetch = window.fetch;
-					let opendeck_fetch_count = 0;
-					let opendeck_fetch_promises = {};
+					const omegadeck_window_fetch = window.fetch;
+					let omegadeck_fetch_count = 0;
+					let omegadeck_fetch_promises = {};
 					window.addEventListener("message", (event) => {
 						const data = event.data;
 						if (data.event == "fetchResponse") {
 							event.stopImmediatePropagation();
 							const response = new Response(data.payload.response.body, data.payload.response);
 							Object.defineProperty(response, "url", { value: data.payload.response.url });
-							opendeck_fetch_promises[data.payload.id].resolve(response);
-							delete opendeck_fetch_promises[data.payload.id];
+							omegadeck_fetch_promises[data.payload.id].resolve(response);
+							delete omegadeck_fetch_promises[data.payload.id];
 						} else if (data.event == "fetchError") {
 							event.stopImmediatePropagation();
-							opendeck_fetch_promises[data.payload.id].reject(data.payload.error);
-							delete opendeck_fetch_promises[data.payload.id];
+							omegadeck_fetch_promises[data.payload.id].reject(data.payload.error);
+							delete omegadeck_fetch_promises[data.payload.id];
 						}
 					});
 					window.fetch = (...args) => {
 						if (args.length) args[0] = new URL(args[0], window.location.href).href;
-						top.postMessage({ event: "fetch", payload: { args, context: window.name, id: ++opendeck_fetch_count }}, "*");
-						return new Promise((resolve, reject) => { opendeck_fetch_promises[opendeck_fetch_count] = { resolve, reject }; });
+						top.postMessage({ event: "fetch", payload: { args, context: window.name, id: ++omegadeck_fetch_count }}, "*");
+						return new Promise((resolve, reject) => { omegadeck_fetch_promises[omegadeck_fetch_count] = { resolve, reject }; });
 					};
 				</script>
 			"#;

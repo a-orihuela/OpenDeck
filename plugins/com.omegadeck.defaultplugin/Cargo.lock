@@ -913,7 +913,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "opendeck-starterpack"
+name = "omegadeck-defaultplugin"
 version = "0.0.0"
 dependencies = [
  "anyhow",

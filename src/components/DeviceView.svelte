@@ -73,7 +73,7 @@
 			position: folderClosePosition,
 		};
 		await renderImage(canvas, closeCtx, {
-			image: "opendeck/folder-close.svg",
+			image: "omegadeck/folder-close.svg",
 			image_scale: 100,
 			background_colour: "#000000",
 			name: "", text: "", show: false,

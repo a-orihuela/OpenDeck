@@ -163,7 +163,7 @@ fn spawn_timer(instance_id: InstanceId) -> JoinHandle<()> {
 pub struct PomodoroAction;
 #[async_trait]
 impl Action for PomodoroAction {
-    const UUID: &'static str = "opendeck.builtin.pomodoro";
+    const UUID: &'static str = "omegadeck.builtin.pomodoro";
     type Settings = PomodoroSettings;
 
     async fn will_appear(&self, instance: &Instance, settings: &Self::Settings) -> OpenActionResult<()> {

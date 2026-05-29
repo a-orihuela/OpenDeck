@@ -12,23 +12,23 @@
 		"resources": { "target/plugins/": "plugins/" },
 		"linux": {
 			"deb": {
-				"desktopTemplate": "bundle/opendeck.desktop",
+				"desktopTemplate": "bundle/omegadeck.desktop",
 				"files": {
 					"/etc/udev/rules.d/40-streamdeck.rules": "bundle/40-streamdeck.rules",
-					"/usr/share/metainfo/opendeck.metainfo.xml": "bundle/opendeck.metainfo.xml"
+					"/usr/share/metainfo/omegadeck.metainfo.xml": "bundle/omegadeck.metainfo.xml"
 				}
 			},
 			"rpm": {
-				"desktopTemplate": "bundle/opendeck.desktop",
+				"desktopTemplate": "bundle/omegadeck.desktop",
 				"files": {
 					"/etc/udev/rules.d/40-streamdeck.rules": "bundle/40-streamdeck.rules",
-					"/usr/share/metainfo/opendeck.metainfo.xml": "bundle/opendeck.metainfo.xml"
+					"/usr/share/metainfo/omegadeck.metainfo.xml": "bundle/omegadeck.metainfo.xml"
 				}
 			}
 		},
 		"publisher": "Abraham Orihuela Mayor (a-orihuela)",
 		"shortDescription": "Use stream controllers",
-		"longDescription": "OpenDeck is a desktop application for using stream controller devices like the Elgato Stream Deck. OpenDeck supports plugins made for the original Stream Deck SDK, allowing many plugins made for the Elgato software ecosystem to be used.",
+		"longDescription": "OmegaDeck is a desktop application for using stream controller devices like the Elgato Stream Deck. OmegaDeck supports plugins made for the original Stream Deck SDK, allowing many plugins made for the Elgato software ecosystem to be used.",
 		"category": "Productivity",
 		"icon": [
 			"icons/icon.png",
@@ -40,20 +40,20 @@
 			"signingIdentity": "-"
 		}
 	},
-	"productName": "OpenDeck",
-	"mainBinaryName": "opendeck",
-	"identifier": "opendeck",
+	"productName": "OmegaDeck",
+	"mainBinaryName": "omegadeck",
+	"identifier": "omegadeck",
 	"plugins": {
 		"deep-link": {
 			"desktop": {
-				"schemes": ["opendeck", "openaction", "streamdeck"]
+				"schemes": ["omegadeck", "openaction", "streamdeck"]
 			}
 		}
 	},
 	"app": {
 		"windows": [
 			{
-				"title": "OpenDeck",
+				"title": "OmegaDeck",
 				"fullscreen": false,
 				"resizable": true,
 				"width": 800,

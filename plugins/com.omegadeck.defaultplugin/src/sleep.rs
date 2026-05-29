@@ -9,7 +9,7 @@ pub struct SleepSettings;
 pub struct SleepAction;
 #[async_trait]
 impl Action for SleepAction {
-    const UUID: &'static str = "opendeck.builtin.sleep";
+    const UUID: &'static str = "omegadeck.builtin.sleep";
     type Settings = SleepSettings;
 
     async fn key_up(&self, _instance: &Instance, _settings: &Self::Settings) -> OpenActionResult<()> {

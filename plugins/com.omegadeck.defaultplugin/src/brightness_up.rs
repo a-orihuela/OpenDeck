@@ -26,7 +26,7 @@ async fn increase(step: u8) -> OpenActionResult<()> {
 pub struct BrightnessUpAction;
 #[async_trait]
 impl Action for BrightnessUpAction {
-    const UUID: &'static str = "opendeck.builtin.brightnessup";
+    const UUID: &'static str = "omegadeck.builtin.brightnessup";
     type Settings = BrightnessUpSettings;
 
     async fn key_up(&self, _instance: &Instance, settings: &Self::Settings) -> OpenActionResult<()> {

@@ -1,4 +1,4 @@
-/// validate-manifest: pre-flight checker for OpenDeck plugin manifests.
+/// validate-manifest: pre-flight checker for OmegaDeck plugin manifests.
 ///
 /// Usage:
 ///   cargo run --bin validate-manifest -- path/to/plugin.sdPlugin

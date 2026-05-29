@@ -6,7 +6,7 @@ import { updateImage } from "./api/commands.ts";
 
 export function getImage(image: string | undefined, fallback: string | undefined): string {
 	if (!image) return fallback ? getImage(fallback, undefined) : "/alert.png";
-	if (image.startsWith("opendeck/")) return image.replace("opendeck", "");
+	if (image.startsWith("omegadeck/")) return image.replace("omegadeck", "");
 	if (!image.startsWith("data:")) return getWebserverUrl(image);
 	const svgxmlre = /^data:image\/svg\+xml(?!.*?;base64.*?)(?:;[\w=]*)*,(.+)/;
 	const base64re = /^data:image\/(apng|avif|gif|jpeg|png|svg\+xml|webp|bmp|x-icon|tiff);base64,([A-Za-z0-9+/]+={0,2})?/;

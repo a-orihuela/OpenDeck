@@ -1,4 +1,4 @@
-//! Non-spec OpenDeck-specific protocols are used in this file.
+//! Non-spec OmegaDeck-specific protocols are used in this file.
 
 use openaction::*;
 
@@ -23,7 +23,7 @@ pub struct SwitchProfileSettings {
 pub struct SwitchProfileAction;
 #[async_trait]
 impl Action for SwitchProfileAction {
-	const UUID: &'static str = "opendeck.builtin.switchprofile";
+	const UUID: &'static str = "omegadeck.builtin.switchprofile";
 	type Settings = SwitchProfileSettings;
 
 	async fn key_up(&self, instance: &Instance, settings: &Self::Settings) -> OpenActionResult<()> {

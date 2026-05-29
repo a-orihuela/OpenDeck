@@ -19,8 +19,8 @@ describe("getImage", () => {
 		expect(getImage("", undefined)).toBe("/alert.png");
 	});
 
-	it("strips opendeck/ prefix and returns path without prefix", () => {
-		expect(getImage("opendeck/multi-action.png", undefined)).toBe("/multi-action.png");
+	it("strips omegadeck/ prefix and returns path without prefix", () => {
+		expect(getImage("omegadeck/multi-action.png", undefined)).toBe("/multi-action.png");
 	});
 
 	it("routes non-data URLs through getWebserverUrl", () => {
@@ -38,7 +38,7 @@ describe("getImage", () => {
 	});
 
 	it("returns fallback result when primary image is undefined and fallback is provided", () => {
-		const fallback = "opendeck/ok.png";
+		const fallback = "omegadeck/ok.png";
 		expect(getImage(undefined, fallback)).toBe("/ok.png");
 	});
 

@@ -1,5 +1,5 @@
 [package]
-name = "opendeck-starterpack"
+name = "omegadeck-defaultplugin"
 authors = ["Abraham Orihuela Mayor (a-orihuela)"]
 license = "GPL-3.0-or-later"
 edition = "2024"

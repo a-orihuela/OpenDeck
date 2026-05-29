@@ -27,7 +27,7 @@ pub struct ScreenshotSettings {
 pub struct ScreenshotAction;
 #[async_trait]
 impl Action for ScreenshotAction {
-    const UUID: &'static str = "opendeck.builtin.screenshot";
+    const UUID: &'static str = "omegadeck.builtin.screenshot";
     type Settings = ScreenshotSettings;
 
     async fn key_up(&self, _instance: &Instance, settings: &Self::Settings) -> OpenActionResult<()> {

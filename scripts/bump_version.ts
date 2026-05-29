@@ -1,8 +1,8 @@
 /// <reference lib="deno.ns" />
 
 const ROOT = new URL("../", import.meta.url);
-const METAINFO = new URL("../src-tauri/bundle/opendeck.metainfo.xml", import.meta.url);
-const STARTERPACK_MANIFEST = new URL("../plugins/com.opendeck.starterpack.sdPlugin/assets/manifest.json", import.meta.url);
+const METAINFO = new URL("../src-tauri/bundle/omegadeck.metainfo.xml", import.meta.url);
+const STARTERPACK_MANIFEST = new URL("../plugins/com.omegadeck.defaultplugin/assets/manifest.json", import.meta.url);
 
 function usage(): never {
 	console.error("Usage: deno run -A scripts/bump_version.ts <version>");
@@ -37,7 +37,7 @@ async function bumpCrateVersion(version: string) {
 	if (updated === section) throw new Error(`Cargo.toml already contains ${version}`);
 	await Deno.writeTextFile(manifest, toml.slice(0, pkgStart) + updated + toml.slice(nextHeader));
 
-	await run("cargo", ["update", "-p", "opendeck", "--manifest-path", manifest.pathname], cwd);
+	await run("cargo", ["update", "-p", "omegadeck", "--manifest-path", manifest.pathname], cwd);
 }
 
 async function bumpStarterPackManifestVersion(version: string) {
@@ -62,12 +62,12 @@ async function prependMetainfoRelease(version: string) {
 	const subjects = subjectsRaw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
 
 	const xml = await Deno.readTextFile(METAINFO);
-	if (xml.includes(`version="${version}"`)) throw new Error(`opendeck.metainfo.xml already contains ${version}`);
+	if (xml.includes(`version="${version}"`)) throw new Error(`omegadeck.metainfo.xml already contains ${version}`);
 
 	const li = subjects.map((s) => `\t\t\t\t\t<li>${xmlEscape(s)}</li>`).join("\n");
 	const block = [
 		`\t\t<release version="${version}" date="${new Date().toISOString().split("T")[0]}">`,
-		`\t\t\t<url type="details">https://github.com/nekename/OpenDeck/releases/tag/v${version}</url>`,
+		`\t\t\t<url type="details">https://github.com/nekename/OmegaDeck/releases/tag/v${version}</url>`,
 		"\t\t\t<description>",
 		"\t\t\t\t<ul>",
 		li,
@@ -77,7 +77,7 @@ async function prependMetainfoRelease(version: string) {
 	].join("\n");
 
 	const updated = xml.replace(/^\s*<releases>\s*$/m, (m) => `${m}\n${block}`);
-	if (updated === xml) throw new Error("Failed to find <releases> in opendeck.metainfo.xml");
+	if (updated === xml) throw new Error("Failed to find <releases> in omegadeck.metainfo.xml");
 	await Deno.writeTextFile(METAINFO, updated);
 
 	console.log(subjects.map((s) => `- ${s}`).join("\n"));

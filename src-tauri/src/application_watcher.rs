@@ -42,7 +42,7 @@ pub fn init_application_watcher() {
 			if app_name != previous {
 				let application_profiles = &APPLICATION_PROFILES.read().await.value;
 				let application = application_profiles.get(&app_name);
-				let default = application_profiles.get("opendeck_default");
+				let default = application_profiles.get("omegadeck_default");
 				for value in crate::shared::DEVICES.iter() {
 					let device = value.key();
 					let Some(profile) = application.and_then(|d| d.get(device)).or(default.and_then(|d| d.get(device))) else {

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-GITHUB_REPO="a-orihuela/OpenDeck"
-FLATHUB_APP_ID="com.opendeck.app"
-UDEV_RULES_URL="https://raw.githubusercontent.com/a-orihuela/OpenDeck/refs/heads/release/src-tauri/bundle/40-streamdeck.rules"
+GITHUB_REPO="a-orihuela/OmegaDeck"
+FLATHUB_APP_ID="com.omegadeck.app"
+UDEV_RULES_URL="https://raw.githubusercontent.com/a-orihuela/OmegaDeck/refs/heads/release/src-tauri/bundle/40-streamdeck.rules"
 
 if [ -t 1 ]; then
     RED="\033[0;31m"
@@ -133,7 +133,7 @@ reload_udev_rules() {
 
 install_flatpak() {
     msg_info "Installing ${FLATHUB_APP_ID} from Flathub"
-    if confirm "Install OpenDeck system-wide? (No = user install)"; then
+    if confirm "Install OmegaDeck system-wide? (No = user install)"; then
         if ! flatpak remote-list | grep -q flathub; then
             msg_error "Flathub remote not found; please add Flathub before running this script"
             exit 1
@@ -199,18 +199,18 @@ install_rpm() {
 install_aur() {
     msg_info "Installing from AUR"
     msg_info "${BOLD}This script will attempt to use yay, paru, aura, pikaur, or trizen, in that order"
-    confirm "If you use another AUR helper, you should install OpenDeck manually. Continue?"
+    confirm "If you use another AUR helper, you should install OmegaDeck manually. Continue?"
 
     if has_cmd yay; then
-        tty_stdin yay -Sy opendeck
+        tty_stdin yay -Sy omegadeck
     elif has_cmd paru; then
-        tty_stdin paru -Sy opendeck
+        tty_stdin paru -Sy omegadeck
     elif has_cmd aura; then
-        tty_stdin aura -Ak opendeck
+        tty_stdin aura -Ak omegadeck
     elif has_cmd pikaur; then
-        tty_stdin pikaur -Sy opendeck
+        tty_stdin pikaur -Sy omegadeck
     elif has_cmd trizen; then
-        tty_stdin trizen -Sy opendeck
+        tty_stdin trizen -Sy omegadeck
     else
         msg_error "No AUR helper found; install yay, paru, aura, pikaur, or trizen, or install manually"
         return 1
@@ -327,7 +327,7 @@ ublue)
 unknown)
     if has_cmd flatpak; then
         msg_warn "No native package method found"
-        msg_info "You can continue by installing with Flatpak; if you experience issues, manually install OpenDeck natively"
+        msg_info "You can continue by installing with Flatpak; if you experience issues, manually install OmegaDeck natively"
         if confirm "Install with Flatpak?"; then
             install_flatpak
         else
@@ -335,7 +335,7 @@ unknown)
             exit 1
         fi
     else
-        msg_error "No usable installation method found; please install OpenDeck manually"
+        msg_error "No usable installation method found; please install OmegaDeck manually"
         exit 1
     fi
     ;;
@@ -345,21 +345,21 @@ install_wine_if_needed
 install_node_if_needed
 
 msg_ok "Installation complete!"
-echo -e "${YELLOW}If you enjoy OpenDeck, please consider starring the project on GitHub: ${BLUE}https://github.com/${GITHUB_REPO}${RESET}"
+echo -e "${YELLOW}If you enjoy OmegaDeck, please consider starring the project on GitHub: ${BLUE}https://github.com/${GITHUB_REPO}${RESET}"
 
-if confirm "Launch OpenDeck now?"; then
+if confirm "Launch OmegaDeck now?"; then
     if [[ "$PKG_FAMILY" == "ublue" ]] || { [[ "$PKG_FAMILY" == "unknown" ]] && has_cmd flatpak; }; then
         flatpak run "${FLATHUB_APP_ID}" &
-        msg_ok "Launched OpenDeck using Flatpak"
+        msg_ok "Launched OmegaDeck using Flatpak"
     else
-        if [ -x /bin/opendeck ]; then
-            /bin/opendeck &
-            msg_ok "Launched OpenDeck from /bin"
-        elif has_cmd opendeck; then
-            opendeck &
-            msg_ok "Launched OpenDeck from PATH"
+        if [ -x /bin/omegadeck ]; then
+            /bin/omegadeck &
+            msg_ok "Launched OmegaDeck from /bin"
+        elif has_cmd omegadeck; then
+            omegadeck &
+            msg_ok "Launched OmegaDeck from PATH"
         else
-            msg_warn "OpenDeck executable not found"
+            msg_warn "OmegaDeck executable not found"
         fi
     fi
 fi

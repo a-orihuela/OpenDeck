@@ -1,10 +1,10 @@
 export const PORT_BASE_DEFAULT = 57116;
-export const BUILTIN_PLUGIN = "opendeck";
+export const BUILTIN_PLUGIN = "omegadeck";
 
-export const ACTION_FOLDER = "opendeck.folder";
-export const ACTION_MULTIACTION = "opendeck.multiaction";
-export const ACTION_TOGGLEACTION = "opendeck.toggleaction";
-export const ACTION_NEXTPAGE = "opendeck.nextpage";
-export const ACTION_PREVIOUSPAGE = "opendeck.previouspage";
+export const ACTION_FOLDER = "omegadeck.folder";
+export const ACTION_MULTIACTION = "omegadeck.multiaction";
+export const ACTION_TOGGLEACTION = "omegadeck.toggleaction";
+export const ACTION_NEXTPAGE = "omegadeck.nextpage";
+export const ACTION_PREVIOUSPAGE = "omegadeck.previouspage";
 
-export const WS_PI_SUFFIX = "|opendeck_property_inspector";
+export const WS_PI_SUFFIX = "|omegadeck_property_inspector";

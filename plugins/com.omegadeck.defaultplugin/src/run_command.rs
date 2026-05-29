@@ -107,7 +107,7 @@ async fn run_command(
 pub struct RunCommandAction;
 #[async_trait]
 impl Action for RunCommandAction {
-	const UUID: &'static str = "opendeck.builtin.runcommand";
+	const UUID: &'static str = "omegadeck.builtin.runcommand";
 	type Settings = RunCommandSettings;
 
 	async fn key_down(

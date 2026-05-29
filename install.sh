@@ -10,7 +10,7 @@ die()  { echo -e "${RED}✗ $*${NC}" >&2; exit 1; }
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║     OpenDeck — dev environment       ║${NC}"
+echo -e "${CYAN}║     OmegaDeck — dev environment       ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════╝${NC}"
 echo ""
 
@@ -153,7 +153,7 @@ echo -e "${GREEN}╔════════════════════
 echo -e "${GREEN}║   All dependencies installed!        ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════╝${NC}"
 echo ""
-echo "  To start OpenDeck in development mode:"
+echo "  To start OmegaDeck in development mode:"
 echo ""
 echo -e "    ${CYAN}cd $(pwd)${NC}"
 echo -e "    ${CYAN}deno run -A npm:@tauri-apps/cli dev${NC}"

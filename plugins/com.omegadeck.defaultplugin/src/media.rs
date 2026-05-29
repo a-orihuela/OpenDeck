@@ -37,15 +37,15 @@ macro_rules! media_action {
     };
 }
 
-media_action!(VolumeUpAction,   "opendeck.builtin.volumeup",   Key::VolumeUp);
-media_action!(VolumeDownAction, "opendeck.builtin.volumedown", Key::VolumeDown);
-media_action!(NextTrackAction,  "opendeck.builtin.nexttrack",  Key::MediaNextTrack);
-media_action!(PrevTrackAction,  "opendeck.builtin.prevtrack",  Key::MediaPrevTrack);
+media_action!(VolumeUpAction,   "omegadeck.builtin.volumeup",   Key::VolumeUp);
+media_action!(VolumeDownAction, "omegadeck.builtin.volumedown", Key::VolumeDown);
+media_action!(NextTrackAction,  "omegadeck.builtin.nexttrack",  Key::MediaNextTrack);
+media_action!(PrevTrackAction,  "omegadeck.builtin.prevtrack",  Key::MediaPrevTrack);
 
 pub struct MuteAction;
 #[async_trait]
 impl Action for MuteAction {
-    const UUID: &'static str = "opendeck.builtin.mute";
+    const UUID: &'static str = "omegadeck.builtin.mute";
     type Settings = NoSettings;
 
     async fn key_down(&self, instance: &Instance, _settings: &Self::Settings) -> OpenActionResult<()> {
@@ -65,7 +65,7 @@ impl Action for MuteAction {
 pub struct PlayPauseAction;
 #[async_trait]
 impl Action for PlayPauseAction {
-    const UUID: &'static str = "opendeck.builtin.playpause";
+    const UUID: &'static str = "omegadeck.builtin.playpause";
     type Settings = NoSettings;
 
     async fn key_down(&self, instance: &Instance, _settings: &Self::Settings) -> OpenActionResult<()> {

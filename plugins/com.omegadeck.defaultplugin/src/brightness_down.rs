@@ -26,7 +26,7 @@ async fn decrease(step: u8) -> OpenActionResult<()> {
 pub struct BrightnessDownAction;
 #[async_trait]
 impl Action for BrightnessDownAction {
-    const UUID: &'static str = "opendeck.builtin.brightnessdown";
+    const UUID: &'static str = "omegadeck.builtin.brightnessdown";
     type Settings = BrightnessDownSettings;
 
     async fn key_up(&self, _instance: &Instance, settings: &Self::Settings) -> OpenActionResult<()> {

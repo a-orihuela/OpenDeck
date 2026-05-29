@@ -99,7 +99,7 @@
 				<summary class="pl-4 py-3 text-lg font-semibold text-neutral-300 hover:bg-neutral-800 transition-colors cursor-pointer">
 					{#if icon}
 						<img
-							src={!icon.startsWith("opendeck/") ? getWebserverUrl(icon) : icon.replace("opendeck", "")}
+							src={!icon.startsWith("omegadeck/") ? getWebserverUrl(icon) : icon.replace("omegadeck", "")}
 							alt={name}
 							class="w-5 h-5 rounded-xs ml-1 -mt-1 inline"
 						/>
@@ -135,7 +135,7 @@
 							}}
 						>
 							<img
-								src={!action.icon.startsWith("opendeck/") ? getWebserverUrl(action.icon) : action.icon.replace("opendeck", "")}
+								src={!action.icon.startsWith("omegadeck/") ? getWebserverUrl(action.icon) : action.icon.replace("omegadeck", "")}
 								alt=""
 								class="m-0.5 mr-3 w-11 h-11 rounded-lg border border-neutral-700 pointer-events-none"
 							/>

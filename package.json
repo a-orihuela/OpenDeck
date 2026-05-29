@@ -1,9 +1,9 @@
 {
-	"name": "opendeck",
+	"name": "omegadeck",
 	"description": "Use stream controllers",
 	"author": "Abraham Orihuela Mayor (a-orihuela)",
 	"license": "GPL-3.0-or-later",
-	"repository": "https://github.com/a-orihuela/OpenDeck",
+	"repository": "https://github.com/a-orihuela/OmegaDeck",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",

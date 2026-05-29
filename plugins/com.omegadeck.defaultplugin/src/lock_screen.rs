@@ -9,7 +9,7 @@ pub struct LockScreenSettings;
 pub struct LockScreenAction;
 #[async_trait]
 impl Action for LockScreenAction {
-    const UUID: &'static str = "opendeck.builtin.lockscreen";
+    const UUID: &'static str = "omegadeck.builtin.lockscreen";
     type Settings = LockScreenSettings;
 
     async fn key_up(&self, _instance: &Instance, _settings: &Self::Settings) -> OpenActionResult<()> {

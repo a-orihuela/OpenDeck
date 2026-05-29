@@ -1,15 +1,15 @@
-# OpenDeck Development Guide
+# OmegaDeck Development Guide
 
 ## Architecture Overview
 
-OpenDeck is a Tauri desktop application for controlling Elgato Stream Deck devices. It's built with:
+OmegaDeck is a Tauri desktop application for controlling Elgato Stream Deck devices. It's built with:
 - **Backend**: Rust (Tauri v2) - device communication, plugin management, WebSocket/HTTP servers
 - **Frontend**: SvelteKit + TypeScript + Tailwind CSS v4 - UI rendered in webview
 - **Build Tool**: Deno (not Node.js) - manages tasks and dependencies
 
 ### Core Architecture Pattern
 
-OpenDeck acts as a **host application** that communicates with **plugins** (separate processes):
+OmegaDeck acts as a **host application** that communicates with **plugins** (separate processes):
 1. Plugins connect via WebSocket (port dynamically allocated, starting from 57116)
 2. Static assets served via `tiny_http` webserver (port = WebSocket port + 2)
 3. Plugin property inspectors (HTML/JS) run in iframes and use separate WebSocket connections
@@ -33,7 +33,7 @@ src/                        # SvelteKit frontend
 ├── components/             # Svelte UI components
 └── routes/                 # SvelteKit routing (currently single-page app)
 
-plugins/com.opendeck.starterpack.sdPlugin/  # Plugin with basic actions
+plugins/com.omegadeck.defaultplugin/  # Plugin with basic actions
 ├── assets/manifest.json                         # Plugin metadata
 ├── assets/propertyInspector/                    # HTML UIs for action settings
 └── src/                                         # Rust plugin using openaction crate
@@ -65,7 +65,7 @@ These are project standards, not suggestions.
 
 ### Built-in Plugins
 
-Built-in plugins included in OpenDeck are Rust binaries. The `build.ts` script in each plugin compiles for multiple targets (x86_64/aarch64) and organizes binaries by OS.
+Built-in plugins included in OmegaDeck are Rust binaries. The `build.ts` script in each plugin compiles for multiple targets (x86_64/aarch64) and organizes binaries by OS.
 
 ## Key Conventions
 
@@ -155,7 +155,7 @@ Auto-switching: `application_watcher.rs` polls active window every 250ms, trigge
 ### External Dependencies
 
 - `elgato-streamdeck`: Async hardware communication via HID, image format conversion for different device types
-- `tauri-plugin-*`: Dialog (file picker), logging (to file), autostart, single-instance, deep-link (opendeck:// URLs)
+- `tauri-plugin-*`: Dialog (file picker), logging (to file), autostart, single-instance, deep-link (omegadeck:// URLs)
 - `tokio-tungstenite`: WebSocket server for plugin communication
 - `tiny_http`: Static file server for plugin assets (icons, property inspectors)
 - `image`: Image loading/manipulation, format conversion for device displays
@@ -175,12 +175,12 @@ Port allocation: `PORT_BASE` (WebSocket), `PORT_BASE + 2` (HTTP static files)
 ### File Locations
 
 ```
-Config: ~/.config/opendeck/ (Linux) / ~/Library/Application Support/opendeck/ (macOS)
-Logs:   ~/.local/share/opendeck/logs/ (Linux) / ~/Library/Logs/opendeck/ (macOS)
+Config: ~/.config/omegadeck/ (Linux) / ~/Library/Application Support/omegadeck/ (macOS)
+Logs:   ~/.local/share/omegadeck/logs/ (Linux) / ~/Library/Logs/omegadeck/ (macOS)
 Plugins: <config_dir>/plugins/
 ```
 
-Flatpak uses different paths with `~/.var/app/com.opendeck.app/` prefix.
+Flatpak uses different paths with `~/.var/app/com.omegadeck.app/` prefix.
 
 ## Frontend Architecture
 
