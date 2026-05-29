@@ -1,7 +1,6 @@
 {
 	"folders": [
-		{ "path": ".." },
-		{ "path": "../plugins/com.omegadeck.defaultplugin" }
+		{ "path": ".." }
 	],
 	"settings": {
 		"editor.insertSpaces": false,

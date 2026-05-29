@@ -105,11 +105,8 @@ pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<Spa
 	{
 		let mut categories = CATEGORIES.write().await;
 		for action in manifest.actions {
-			let cat_name = crate::constants::BUILTIN_ACTION_CATEGORIES
-				.iter()
-				.find(|(uuid, _)| *uuid == action.uuid)
-				.map(|(_, cat)| *cat)
-				.or_else(|| manifest.action_categories.get(&action.uuid).map(|s| s.as_str()))
+			let cat_name = manifest.action_categories.get(&action.uuid)
+				.map(|s| s.as_str())
 				.unwrap_or(&manifest.category)
 				.to_owned();
 			let cat_icon = if cat_name == manifest.category { manifest.category_icon.clone() } else { None };
@@ -246,29 +243,17 @@ pub fn initialise_plugins() {
 	if let Ok(Ok(entries)) = APP_HANDLE.get().unwrap().path().resolve("plugins", tauri::path::BaseDirectory::Resource).map(fs::read_dir) {
 		for entry in entries.flatten() {
 			if let Err(error) = (|| -> Result<(), anyhow::Error> {
-				let builtin_version = semver::Version::parse(&serde_json::from_slice::<manifest::PluginManifest>(&fs::read(entry.path().join("manifest.json"))?)?.version)?;
 				let existing_path = plugin_dir.join(entry.file_name());
-				if (|| -> Result<(), anyhow::Error> {
-					let existing_version = semver::Version::parse(&serde_json::from_slice::<manifest::PluginManifest>(&fs::read(existing_path.join("manifest.json"))?)?.version)?;
-					if existing_version < builtin_version {
-						Err(anyhow::anyhow!("builtin version is newer than existing version"))
-					} else {
-						Ok(())
-					}
-				})()
-				.is_err()
-				{
-					if existing_path.exists() {
-						fs::rename(&existing_path, existing_path.with_extension("old"))?;
-					}
-					if crate::shared::copy_dir(entry.path(), &existing_path).is_err() && existing_path.with_extension("old").exists() {
-						fs::rename(existing_path.with_extension("old"), &existing_path)?;
-					}
-					let _ = fs::remove_dir_all(existing_path.with_extension("old"));
+				if existing_path.exists() {
+					fs::rename(&existing_path, existing_path.with_extension("old"))?;
 				}
+				if crate::shared::copy_dir(entry.path(), &existing_path).is_err() && existing_path.with_extension("old").exists() {
+					fs::rename(existing_path.with_extension("old"), &existing_path)?;
+				}
+				let _ = fs::remove_dir_all(existing_path.with_extension("old"));
 				Ok(())
 			})() {
-				error!("Failed to upgrade builtin plugin {}: {}", entry.file_name().to_string_lossy(), error);
+				error!("Failed to sync builtin plugin {}: {}", entry.file_name().to_string_lossy(), error);
 			}
 		}
 	}

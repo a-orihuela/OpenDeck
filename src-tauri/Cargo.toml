@@ -58,6 +58,9 @@ path-slash = "0.2"
 fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs", rev = "c4c45d503ea115a839aae718d02f79e7c7f0f673" }
 font-loader = "0.11"
 chrono = "0.4"
+enigo = { git = "https://github.com/enigo-rs/enigo.git", rev = "4cb8833144e6e5e679b91ae7fd53507f9abf751d", features = ["serde", "x11rb", "wayland"] }
+ron = "0.12"
+os_pipe = "1.2"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

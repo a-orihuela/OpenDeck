@@ -2,6 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod application_watcher;
+pub mod builtin_actions;
+pub mod builtin_pomodoro;
 pub mod constants;
 mod device_sleep;
 mod elgato;

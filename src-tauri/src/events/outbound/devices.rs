@@ -91,6 +91,13 @@ struct SetBrightnessEvent {
 	brightness: u8,
 }
 
+/// Adjust brightness for all devices by a signed delta, clamped to 0–100.
+pub async fn change_brightness(delta: i32) -> Result<(), anyhow::Error> {
+	let current = crate::store::get_settings().value.brightness;
+	let new_brightness = (current as i32 + delta).clamp(0, 100) as u8;
+	set_brightness(new_brightness).await
+}
+
 /// Set the brightness for all devices.
 pub async fn set_brightness(brightness: u8) -> Result<(), anyhow::Error> {
 	for device in crate::shared::DEVICES.iter() {

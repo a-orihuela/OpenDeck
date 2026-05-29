@@ -34,24 +34,3 @@ pub const WS_ALT_ELGATO: &str = "omegadeck_alternative_elgato_implementation";
 // ── Stream Deck SDK version advertised to plugins ────────────────────────────
 pub const ESD_VERSION: &str = "7.1.0";
 
-// ── Category mapping for built-in starterpack actions ────────────────────────
-// Keyed by action UUID. Takes priority over the "Category" field in manifest.json
-// so that categories always work regardless of the installed manifest version.
-pub const BUILTIN_ACTION_CATEGORIES: &[(&str, &str)] = &[
-    ("omegadeck.builtin.runcommand",     "Automation"),
-    ("omegadeck.builtin.openurl",        "Automation"),
-    ("omegadeck.builtin.inputsimulation","Automation"),
-    ("omegadeck.builtin.switchprofile",  "Productivity"),
-    ("omegadeck.builtin.pomodoro",       "Productivity"),
-    ("omegadeck.builtin.brightnessup",   "System"),
-    ("omegadeck.builtin.brightnessdown", "System"),
-    ("omegadeck.builtin.lockscreen",     "System"),
-    ("omegadeck.builtin.sleep",          "System"),
-    ("omegadeck.builtin.screenshot",     "System"),
-    ("omegadeck.builtin.volumeup",       "Media"),
-    ("omegadeck.builtin.volumedown",     "Media"),
-    ("omegadeck.builtin.mute",           "Media"),
-    ("omegadeck.builtin.playpause",      "Media"),
-    ("omegadeck.builtin.nexttrack",      "Media"),
-    ("omegadeck.builtin.prevtrack",      "Media"),
-];

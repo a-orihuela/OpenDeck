@@ -150,6 +150,14 @@ pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 			},
 		)
 		.await?;
+	} else if instance.action.uuid.starts_with("omegadeck.builtin.") {
+		let new_state = crate::builtin_actions::handle(instance, crate::builtin_actions::ActionEvent::KeyDown).await?;
+		if let Some(state) = new_state {
+			instance.current_state = state;
+			let ctx = instance.context.clone();
+			update_state(crate::APP_HANDLE.get().unwrap(), ctx, &mut locks).await?;
+		}
+		save_profile(device, &mut locks).await?;
 	} else {
 		send_to_plugin(
 			&instance.action.plugin,
@@ -259,6 +267,11 @@ pub async fn key_up(device: &str, key: u8) -> Result<(), anyhow::Error> {
 		)
 		.await?;
 		instance.current_state = ((index + 1) % instance.children.as_ref().unwrap().len()) as u16;
+	} else if instance.action.uuid.starts_with("omegadeck.builtin.") {
+		let new_state = crate::builtin_actions::handle(instance, crate::builtin_actions::ActionEvent::KeyUp).await?;
+		if let Some(state) = new_state {
+			instance.current_state = state;
+		}
 	} else if instance.action.uuid != ACTION_MULTIACTION {
 		if instance.states.len() == 2 && !instance.action.disable_automatic_states {
 			instance.current_state = (instance.current_state + 1) % (instance.states.len() as u16);
