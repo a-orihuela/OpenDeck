@@ -241,9 +241,6 @@ pub struct Action {
 
 	#[serde(alias = "States")]
 	pub states: Vec<ActionState>,
-
-	#[serde(alias = "Category", default)]
-	pub category: Option<String>,
 }
 
 /// Location metadata of a slot.
@@ -356,7 +353,7 @@ pub struct Profile {
 pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::new(|| {
 	let mut hashmap = HashMap::new();
 	hashmap.insert(
-		PRODUCT_NAME.to_owned(),
+		"Actions".to_owned(),
 		Category {
 			icon: None,
 			actions: vec![

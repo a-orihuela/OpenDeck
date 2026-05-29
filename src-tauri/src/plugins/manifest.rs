@@ -69,6 +69,12 @@ pub struct PluginManifest {
 
 	#[serde(alias = "Capabilities")]
 	pub capabilities: Option<Vec<String>>,
+
+	/// Per-action category overrides, keyed by action UUID. Populated from the raw
+	/// JSON in `read_manifest` because `serde_inline_default` on `Action` prevents
+	/// the alias from being applied during nested deserialization.
+	#[serde(skip)]
+	pub action_categories: HashMap<String, String>,
 }
 
 pub fn read_manifest(base_path: &std::path::Path) -> Result<PluginManifest, anyhow::Error> {
@@ -88,7 +94,28 @@ pub fn read_manifest(base_path: &std::path::Path) -> Result<PluginManifest, anyh
 		json_patch::merge(&mut manifest, &platform_overrides);
 	}
 
-	serde_json::from_value(manifest).context("failed to parse manifest")
+	// Extract per-action categories from the raw JSON before `from_value` consumes it.
+	// We can't rely on a `category` field on `shared::Action` because the `serde_inline_default`
+	// macro's generated visitor doesn't carry through `#[serde(alias)]` on non-default fields.
+	let action_categories: HashMap<String, String> = manifest["Actions"]
+		.as_array()
+		.map(|actions| {
+			actions.iter().filter_map(|a| {
+				let uuid = a.get("UUID").or_else(|| a.get("uuid"))
+					.and_then(|v| v.as_str())?
+					.to_owned();
+				let category = a.get("Category").or_else(|| a.get("category"))
+					.and_then(|v| v.as_str())?
+					.to_owned();
+				Some((uuid, category))
+			})
+			.collect()
+		})
+		.unwrap_or_default();
+
+	let mut plugin_manifest: PluginManifest = serde_json::from_value(manifest).context("failed to parse manifest")?;
+	plugin_manifest.action_categories = action_categories;
+	Ok(plugin_manifest)
 }
 
 #[cfg(test)]

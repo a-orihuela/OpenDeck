@@ -105,7 +105,13 @@ pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<Spa
 	{
 		let mut categories = CATEGORIES.write().await;
 		for action in manifest.actions {
-			let cat_name = action.category.as_deref().unwrap_or(&manifest.category).to_owned();
+			let cat_name = crate::constants::BUILTIN_ACTION_CATEGORIES
+				.iter()
+				.find(|(uuid, _)| *uuid == action.uuid)
+				.map(|(_, cat)| *cat)
+				.or_else(|| manifest.action_categories.get(&action.uuid).map(|s| s.as_str()))
+				.unwrap_or(&manifest.category)
+				.to_owned();
 			let cat_icon = if cat_name == manifest.category { manifest.category_icon.clone() } else { None };
 			let cat = categories.entry(cat_name).or_insert_with(|| Category { icon: cat_icon, actions: vec![] });
 			if let Some(index) = cat.actions.iter().position(|v| v.uuid == action.uuid) {

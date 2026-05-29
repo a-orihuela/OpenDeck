@@ -7,19 +7,16 @@
 	import { getWebserverUrl } from "$lib/ports";
 	import { copiedItem } from "$lib/propertyInspector";
 	import { localisations } from "$lib/settings";
-	import { PRODUCT_NAME } from "$lib/singletons";
 
-	import { getCategories, listPlugins } from "$lib/api/commands";
+	import { getCategories } from "$lib/api/commands";
 
 	import { inFolderMode } from "$lib/singletons";
 
 	const FOLDER_FORBIDDEN_ACTIONS = new Set([ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE, ACTION_FOLDER]);
 
 	let categories: { [name: string]: { icon?: string; actions: Action[] } } = {};
-	let plugins: any[] = [];
 	export async function reload() {
 		categories = await getCategories();
-		plugins = await listPlugins();
 	}
 	reload();
 
@@ -28,7 +25,7 @@
 	$: {
 		let lowerCaseQuery = query.toLowerCase().trim();
 		filteredCategories = Object.entries(categories)
-			.sort((a, b) => a[0] == PRODUCT_NAME ? -1 : b[0] == PRODUCT_NAME ? 1 : a[0].localeCompare(b[0]))
+			.sort((a, b) => a[0].localeCompare(b[0]))
 			.map(([categoryName, { icon, actions }]): [string, { icon?: string; actions: Action[] }] => {
 				if ($inFolderMode) {
 					actions = actions.filter((action) => !FOLDER_FORBIDDEN_ACTIONS.has(action.uuid));
@@ -100,9 +97,9 @@
 		{#each filteredCategories as [name, { icon, actions }]}
 			<details open>
 				<summary class="pl-4 py-3 text-lg font-semibold text-neutral-300 hover:bg-neutral-800 transition-colors cursor-pointer">
-					{#if icon || (actions[0] && plugins.find((x) => x.id == actions[0].plugin) && categories[name].actions.every((x) => x.plugin == actions[0].plugin))}
+					{#if icon}
 						<img
-							src={icon ? (!icon.startsWith("opendeck/") ? getWebserverUrl(icon) : icon.replace("opendeck", "")) : getWebserverUrl(plugins.find((x) => x.id == actions[0].plugin).icon)}
+							src={!icon.startsWith("opendeck/") ? getWebserverUrl(icon) : icon.replace("opendeck", "")}
 							alt={name}
 							class="w-5 h-5 rounded-xs ml-1 -mt-1 inline"
 						/>
