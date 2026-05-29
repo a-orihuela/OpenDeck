@@ -1,5 +1,6 @@
 use super::Error;
 
+use crate::constants::{ACTION_MULTIACTION, ACTION_TOGGLEACTION};
 use crate::shared::{ActionInstance, DEVICE_ACTIVE_PAGES, DEVICES};
 use crate::store::profiles::{LocksMut, acquire_locks_mut, save_profile};
 
@@ -59,7 +60,7 @@ pub async fn change_active_page(device: &str, new_page: u8, locks: &mut LocksMut
 }
 
 pub async fn fire_will_disappear(instance: &ActionInstance) {
-	if !matches!(instance.action.uuid.as_str(), "opendeck.multiaction" | "opendeck.toggleaction") {
+	if !matches!(instance.action.uuid.as_str(), ACTION_MULTIACTION | ACTION_TOGGLEACTION) {
 		let _ = crate::events::outbound::will_appear::will_disappear(instance, true).await;
 	} else if let Some(children) = &instance.children {
 		for child in children {
@@ -69,7 +70,7 @@ pub async fn fire_will_disappear(instance: &ActionInstance) {
 }
 
 pub async fn fire_will_appear(instance: &ActionInstance) {
-	if !matches!(instance.action.uuid.as_str(), "opendeck.multiaction" | "opendeck.toggleaction") {
+	if !matches!(instance.action.uuid.as_str(), ACTION_MULTIACTION | ACTION_TOGGLEACTION) {
 		let _ = crate::events::outbound::will_appear::will_appear(instance).await;
 	} else if let Some(children) = &instance.children {
 		for child in children {

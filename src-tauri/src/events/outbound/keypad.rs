@@ -1,5 +1,6 @@
 use super::{GenericInstancePayload, send_to_plugin};
 
+use crate::constants::{ACTION_FOLDER, ACTION_MULTIACTION, ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE, ACTION_TOGGLEACTION};
 use crate::events::frontend::instances::{key_moved, update_state};
 use crate::events::frontend::pages::change_active_page;
 use crate::shared::{ActionContext, Context, DEVICE_ACTIVE_FOLDER, DEVICE_ACTIVE_PAGES, DEVICES};
@@ -62,7 +63,7 @@ pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 	};
 	let Some(action_uuid) = action_uuid else { return Ok(()) };
 
-	if action_uuid == "opendeck.folder" {
+	if action_uuid == ACTION_FOLDER {
 		// Drop write locks before calling enter_folder_internal — it acquires its own locks
 		// internally, and holding them here would cause a write-lock re-entrance deadlock.
 		drop(locks);
@@ -74,13 +75,13 @@ pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 		return Ok(());
 	}
 
-	if action_uuid == "opendeck.nextpage" || action_uuid == "opendeck.previouspage" {
+	if action_uuid == ACTION_NEXTPAGE || action_uuid == ACTION_PREVIOUSPAGE {
 		let num_pages = {
 			let device_info = DEVICES.get(device).ok_or_else(|| anyhow::anyhow!("device not found"))?;
 			locks.profile_stores.get_profile_store(&device_info, &context.profile)?.value.num_pages
 		};
 		let current_page = DEVICE_ACTIVE_PAGES.get(device).map(|p| *p).unwrap_or(0);
-		let new_page = if action_uuid == "opendeck.nextpage" {
+		let new_page = if action_uuid == ACTION_NEXTPAGE {
 			(current_page + 1) % num_pages
 		} else {
 			(current_page + num_pages - 1) % num_pages
@@ -91,7 +92,7 @@ pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 	}
 
 	let Some(instance) = get_slot_mut(&context, &mut locks).await? else { return Ok(()) };
-	if instance.action.uuid == "opendeck.multiaction" {
+	if instance.action.uuid == ACTION_MULTIACTION {
 		for child in instance.children.as_mut().unwrap() {
 			send_to_plugin(
 				&child.action.plugin,
@@ -132,7 +133,7 @@ pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 		}
 
 		save_profile(device, &mut locks).await?;
-	} else if instance.action.uuid == "opendeck.toggleaction" {
+	} else if instance.action.uuid == ACTION_TOGGLEACTION {
 		let children = instance.children.as_ref().unwrap();
 		if children.is_empty() {
 			return Ok(());
@@ -239,7 +240,7 @@ pub async fn key_up(device: &str, key: u8) -> Result<(), anyhow::Error> {
 	let slot = get_slot_mut(&context, &mut locks).await?;
 	let Some(instance) = slot else { return Ok(()) };
 
-	if instance.action.uuid == "opendeck.toggleaction" {
+	if instance.action.uuid == ACTION_TOGGLEACTION {
 		let index = instance.current_state as usize;
 		let children = instance.children.as_ref().unwrap();
 		if children.is_empty() {
@@ -258,7 +259,7 @@ pub async fn key_up(device: &str, key: u8) -> Result<(), anyhow::Error> {
 		)
 		.await?;
 		instance.current_state = ((index + 1) % instance.children.as_ref().unwrap().len()) as u16;
-	} else if instance.action.uuid != "opendeck.multiaction" {
+	} else if instance.action.uuid != ACTION_MULTIACTION {
 		if instance.states.len() == 2 && !instance.action.disable_automatic_states {
 			instance.current_state = (instance.current_state + 1) % (instance.states.len() as u16);
 		}

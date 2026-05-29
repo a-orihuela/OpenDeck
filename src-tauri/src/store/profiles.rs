@@ -1,5 +1,6 @@
 use super::Store;
 
+use crate::constants::{BUILTIN_PLUGIN, DIR_PLUGINS, DIR_PROFILES};
 use crate::shared::{ActionInstance, DEVICES, DeviceInfo, Profile, config_dir, copy_dir};
 
 use std::collections::HashMap;
@@ -42,7 +43,7 @@ impl ProfileStores {
 				num_pages: 1,
 			};
 
-			let mut store = Store::new(&canonical_id, &config_dir().join("profiles"), default).context(format!("Failed to create store for profile {}", canonical_id))?;
+			let mut store = Store::new(&canonical_id, &config_dir().join(DIR_PROFILES), default).context(format!("Failed to create store for profile {}", canonical_id))?;
 			let page_slots = (device.rows * device.columns) as usize * store.value.num_pages as usize;
 			let total_keys = page_slots + device.touchpoints as usize;
 			// Grow or shrink the keys array while preserving touchpoints at the end.
@@ -57,10 +58,10 @@ impl ProfileStores {
 
 			let categories = crate::shared::CATEGORIES.read().await;
 			let actions = categories.values().flat_map(|v| v.actions.iter()).collect::<Vec<_>>();
-			let plugins_dir = config_dir().join("plugins");
+			let plugins_dir = config_dir().join(DIR_PLUGINS);
 			let registered = crate::events::registered_plugins().await;
 			let keep_instance = |instance: &ActionInstance| -> bool {
-				instance.action.plugin == "opendeck"
+				instance.action.plugin == BUILTIN_PLUGIN
 					|| (plugins_dir.join(&instance.action.plugin).exists() && (!registered.contains(&instance.action.plugin) || actions.iter().any(|v| v.uuid == instance.action.uuid)))
 			};
 			for slot in store.value.keys.iter_mut().chain(store.value.sliders.iter_mut()) {
@@ -121,7 +122,7 @@ impl ProfileStores {
 		let config_dir = config_dir();
 		#[cfg(target_os = "windows")]
 		let id = &id.replace('/', "\\");
-		let path = config_dir.join("profiles").join(device).join(format!("{id}.json"));
+		let path = config_dir.join(DIR_PROFILES).join(device).join(format!("{id}.json"));
 		let _ = fs::remove_file(&path);
 		// This is safe as `remove_dir` errors if the directory is not empty.
 		let _ = fs::remove_dir(path.parent().unwrap());
@@ -148,8 +149,8 @@ impl ProfileStores {
 		#[cfg(not(target_os = "windows"))]
 		let new_path_id = new_id;
 
-		let old_path = config_dir.join("profiles").join(&device.id).join(format!("{}.json", old_path_id));
-		let new_path = config_dir.join("profiles").join(&device.id).join(format!("{}.json", new_path_id));
+		let old_path = config_dir.join(DIR_PROFILES).join(&device.id).join(format!("{}.json", old_path_id));
+		let new_path = config_dir.join(DIR_PROFILES).join(&device.id).join(format!("{}.json", new_path_id));
 
 		// Create parent directory for new path if it doesn't exist
 		if let Some(parent) = new_path.parent() {
@@ -234,7 +235,7 @@ impl DeviceStores {
 				selected_profile: "Default".to_owned(),
 			};
 
-			let store = Store::new(device, &config_dir().join("profiles"), default).context(format!("Failed to create store for device config {}", device))?;
+			let store = Store::new(device, &config_dir().join(DIR_PROFILES), default).context(format!("Failed to create store for device config {}", device))?;
 			store.save()?;
 
 			self.stores.insert(device.to_owned(), store);
@@ -253,7 +254,7 @@ impl DeviceStores {
 		} else {
 			let default = DeviceConfig { selected_profile: id };
 
-			let store = Store::new(device, &config_dir().join("profiles"), default).context(format!("Failed to create store for device config {}", device))?;
+			let store = Store::new(device, &config_dir().join(DIR_PROFILES), default).context(format!("Failed to create store for device config {}", device))?;
 			store.save()?;
 
 			self.stores.insert(device.to_owned(), store);
@@ -265,7 +266,7 @@ impl DeviceStores {
 pub fn get_device_profiles(device: &str) -> Result<Vec<String>, anyhow::Error> {
 	let mut profiles: Vec<String> = vec![];
 
-	let device_path = config_dir().join("profiles").join(device);
+	let device_path = config_dir().join(DIR_PROFILES).join(device);
 	fs::create_dir_all(&device_path)?;
 	let entries = fs::read_dir(device_path)?;
 

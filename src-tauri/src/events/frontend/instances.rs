@@ -1,5 +1,6 @@
 use super::Error;
 
+use crate::constants::{ACTION_FOLDER, ACTION_MULTIACTION, ACTION_TOGGLEACTION};
 use crate::shared::{Action, ActionContext, ActionInstance, ActionState, Context, DEVICE_ACTIVE_FOLDER, config_dir};
 use crate::store::profiles::{LocksMut, acquire_locks, acquire_locks_mut, get_instance_mut, get_slot, get_slot_mut, save_profile};
 
@@ -45,7 +46,7 @@ pub async fn create_instance(app: AppHandle, action: Action, context: Context) -
 		};
 		children.push(instance.clone());
 
-		if parent.action.uuid == "opendeck.toggleaction" && parent.states.len() < children.len() {
+		if parent.action.uuid == ACTION_TOGGLEACTION && parent.states.len() < children.len() {
 			parent.states.push(crate::shared::ActionState {
 				image: "opendeck/toggle-action.png".to_owned(),
 				..Default::default()
@@ -61,7 +62,7 @@ pub async fn create_instance(app: AppHandle, action: Action, context: Context) -
 		let slot = get_slot(&context, &locks).await?.clone();
 		Ok(slot)
 	} else {
-		let folder_slots = if action.uuid == "opendeck.folder" {
+		let folder_slots = if action.uuid == ACTION_FOLDER {
 			let page_size = crate::shared::DEVICES.get(&context.device)
 				.map(|d| (d.rows * d.columns) as usize)
 				.unwrap_or(15);
@@ -76,7 +77,7 @@ pub async fn create_instance(app: AppHandle, action: Action, context: Context) -
 			states: action.states.clone(),
 			current_state: 0,
 			settings: serde_json::Value::Object(serde_json::Map::new()),
-			children: if matches!(action.uuid.as_str(), "opendeck.multiaction" | "opendeck.toggleaction") {
+			children: if matches!(action.uuid.as_str(), ACTION_MULTIACTION | ACTION_TOGGLEACTION) {
 				Some(vec![])
 			} else {
 				None
@@ -209,7 +210,7 @@ pub async fn remove_instance(context: ActionContext) -> Result<(), Error> {
 				break;
 			}
 		}
-		if instance.action.uuid == "opendeck.toggleaction" {
+		if instance.action.uuid == ACTION_TOGGLEACTION {
 			if instance.current_state as usize >= children.len() {
 				instance.current_state = if children.is_empty() { 0 } else { children.len() as u16 - 1 };
 			}

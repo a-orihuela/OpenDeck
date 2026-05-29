@@ -1,5 +1,6 @@
 use super::Error;
 
+use crate::constants::{ACTION_MULTIACTION, ACTION_TOGGLEACTION};
 use crate::shared::DEVICES;
 use crate::store::profiles::{PROFILE_SAVE_DEBOUNCE, PROFILE_STORES, acquire_locks_mut, get_device_profiles, save_profile};
 
@@ -53,7 +54,7 @@ pub async fn set_selected_profile(device: String, id: String) -> Result<(), Erro
 	if selected_profile != id {
 		let old_profile = &locks.profile_stores.get_profile_store(&DEVICES.get(&device).unwrap(), &selected_profile)?.value;
 		for instance in old_profile.keys.iter().flatten().chain(&mut old_profile.sliders.iter().flatten()) {
-			if !matches!(instance.action.uuid.as_str(), "opendeck.multiaction" | "opendeck.toggleaction") {
+			if !matches!(instance.action.uuid.as_str(), ACTION_MULTIACTION | ACTION_TOGGLEACTION) {
 				let _ = crate::events::outbound::will_appear::will_disappear(instance, false).await;
 			} else {
 				for child in instance.children.as_ref().unwrap() {
@@ -68,7 +69,7 @@ pub async fn set_selected_profile(device: String, id: String) -> Result<(), Erro
 	let store = locks.profile_stores.get_profile_store_mut(&DEVICES.get(&device).unwrap(), &id).await?;
 	let new_profile = &store.value;
 	for instance in new_profile.keys.iter().flatten().chain(&mut new_profile.sliders.iter().flatten()) {
-		if !matches!(instance.action.uuid.as_str(), "opendeck.multiaction" | "opendeck.toggleaction") {
+		if !matches!(instance.action.uuid.as_str(), ACTION_MULTIACTION | ACTION_TOGGLEACTION) {
 			let _ = crate::events::outbound::will_appear::will_appear(instance).await;
 		} else {
 			for child in instance.children.as_ref().unwrap() {

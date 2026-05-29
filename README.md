@@ -77,7 +77,7 @@ To change other options, open Settings. From here, you can also view information
 	- For issues with plugins, you can also check the plugin's logs (in the same folder, sometimes as well as a file named `plugin.log` or similar in the plugin's own folder).
 	- The log directory can be opened from the settings page of OpenDeck, or alternatively located manually at the paths below:
 		- Linux: `~/.local/share/opendeck/logs/`
-		- Flatpak: `~/.var/app/OPENDECK_APP_ID/data/opendeck/logs/`
+		- Flatpak: `~/.var/app/com.opendeck.app/data/opendeck/logs/`
 		- Windows: `%appdata%\opendeck\logs\`
 		- macOS: `~/Library/Logs/opendeck/`
 - When trying to run compiled plugins built for Windows on Linux or macOS, please ensure you have the latest version of Wine (and Wine Mono) installed on your system.

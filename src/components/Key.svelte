@@ -14,6 +14,7 @@
 	import { connectedPlugins } from "$lib/pluginStatus";
 	import { notify } from "$lib/notifications";
 
+	import { ACTION_FOLDER, ACTION_MULTIACTION, ACTION_TOGGLEACTION, BUILTIN_PLUGIN } from "$lib/constants";
 	import { enterFolder, removeInstance, triggerVirtualPress as apiTriggerVirtualPress, updateImage } from "$lib/api/commands";
 	import { onKeyMoved, onShowAlert, onShowOk, onUpdateState } from "$lib/api/events";
 	import { tick } from "svelte";
@@ -61,11 +62,11 @@
 			$inspectedInstance = context;
 			return;
 		}
-		if (slot.action.uuid == "opendeck.folder" && context) {
+		if (slot.action.uuid == ACTION_FOLDER && context) {
 			enterFolder(context.device, slot.context);
 			return;
 		}
-		if (slot.action.uuid == "opendeck.multiaction" || slot.action.uuid == "opendeck.toggleaction") {
+		if (slot.action.uuid == ACTION_MULTIACTION || slot.action.uuid == ACTION_TOGGLEACTION) {
 			$inspectedParentAction = context;
 		} else {
 			$inspectedInstance = slot.context;
@@ -78,7 +79,7 @@
 			$inspectedInstance = context;
 			return;
 		}
-		if (slot.action.uuid != "opendeck.multiaction" && slot.action.uuid != "opendeck.toggleaction") {
+		if (slot.action.uuid != ACTION_MULTIACTION && slot.action.uuid != ACTION_TOGGLEACTION) {
 			$inspectedInstance = slot.context;
 		} else {
 			$inspectedInstance = context;
@@ -136,7 +137,7 @@
 
 	let showAlert: boolean = false;
 	let showOk: boolean = false;
-	$: pluginOffline = !!slot && slot.action.plugin !== "opendeck" && !$connectedPlugins.has(slot.action.plugin);
+	$: pluginOffline = !!slot && slot.action.plugin !== BUILTIN_PLUGIN && !$connectedPlugins.has(slot.action.plugin);
 	let timeouts: number[] = [];
 	onShowAlert((ctx) => {
 		if (!slot || ctx != slot.context) return;

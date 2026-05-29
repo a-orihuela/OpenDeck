@@ -1,5 +1,6 @@
 use super::Error;
 
+use crate::constants::{ACTION_FOLDER, ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE};
 use crate::events::frontend::pages::{fire_will_appear, fire_will_disappear};
 use crate::shared::{Action, ActionContext, ActionInstance, DEVICE_ACTIVE_FOLDER, DEVICE_ACTIVE_PAGES, DEVICES};
 use crate::store::profiles::{acquire_locks_mut, get_slot_mut, save_profile};
@@ -113,7 +114,7 @@ pub async fn exit_folder(device: String) -> Result<(), Error> {
 }
 
 fn is_forbidden_in_folder(uuid: &str) -> bool {
-	matches!(uuid, "opendeck.nextpage" | "opendeck.previouspage" | "opendeck.folder")
+	matches!(uuid, ACTION_NEXTPAGE | ACTION_PREVIOUSPAGE | ACTION_FOLDER)
 }
 
 pub async fn create_folder_child_impl(

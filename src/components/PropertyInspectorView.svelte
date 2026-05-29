@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ActionInstance, DeviceInfo, Profile } from "$lib/bindings";
 
+	import { WS_PI_SUFFIX } from "$lib/constants";
 	import { getWebserverUrl, getWebSocketPort } from "$lib/ports";
 	import { inspectedInstance } from "$lib/propertyInspector";
 
@@ -189,7 +190,7 @@
 				title="Property inspector"
 				class="w-full h-full hidden"
 				class:block!={$inspectedInstance == instance.context}
-				src={getWebserverUrl(instance.action.property_inspector + "|opendeck_property_inspector")}
+				src={getWebserverUrl(instance.action.property_inspector + WS_PI_SUFFIX)}
 				name={instance.context}
 				bind:this={iframes[instance.context]}
 				on:load={() => iframeOnLoad(instance)}

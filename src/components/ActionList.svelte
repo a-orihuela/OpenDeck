@@ -3,6 +3,7 @@
 
 	import MagnifyingGlass from "phosphor-svelte/lib/MagnifyingGlass";
 
+	import { ACTION_FOLDER, ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE } from "$lib/constants";
 	import { getWebserverUrl } from "$lib/ports";
 	import { copiedItem } from "$lib/propertyInspector";
 	import { localisations } from "$lib/settings";
@@ -12,7 +13,7 @@
 
 	import { inFolderMode } from "$lib/singletons";
 
-	const FOLDER_FORBIDDEN_ACTIONS = new Set(["opendeck.nextpage", "opendeck.previouspage", "opendeck.folder"]);
+	const FOLDER_FORBIDDEN_ACTIONS = new Set([ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE, ACTION_FOLDER]);
 
 	let categories: { [name: string]: { icon?: string; actions: Action[] } } = {};
 	let plugins: any[] = [];

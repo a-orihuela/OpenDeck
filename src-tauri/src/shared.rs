@@ -10,7 +10,7 @@ use dashmap::DashMap;
 use tauri::Manager;
 use tokio::sync::RwLock;
 
-pub const PRODUCT_NAME: &str = include_str!("../../product_name.txt").trim_ascii();
+pub use crate::constants::PRODUCT_NAME;
 
 pub fn copy_dir(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<(), std::io::Error> {
 	use std::fs;
@@ -241,6 +241,9 @@ pub struct Action {
 
 	#[serde(alias = "States")]
 	pub states: Vec<ActionState>,
+
+	#[serde(alias = "Category", default)]
+	pub category: Option<String>,
 }
 
 /// Location metadata of a slot.
@@ -361,8 +364,8 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 					{
 						"name": "Multi Action",
 						"icon": "opendeck/multi-action.png",
-						"plugin": "opendeck",
-						"uuid": "opendeck.multiaction",
+						"plugin": crate::constants::BUILTIN_PLUGIN,
+						"uuid": crate::constants::ACTION_MULTIACTION,
 						"tooltip": "Execute multiple actions",
 						"controllers": [ "Keypad" ],
 						"states": [ { "image": "opendeck/multi-action.png" } ],
@@ -374,8 +377,8 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 					{
 						"name": "Toggle Action",
 						"icon": "opendeck/toggle-action.png",
-						"plugin": "opendeck",
-						"uuid": "opendeck.toggleaction",
+						"plugin": crate::constants::BUILTIN_PLUGIN,
+						"uuid": crate::constants::ACTION_TOGGLEACTION,
 						"tooltip": "Cycle through multiple actions",
 						"controllers": [ "Keypad" ],
 						"states": [ { "image": "opendeck/toggle-action.png" } ],
@@ -395,8 +398,8 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 					{
 						"name": "Next Page",
 						"icon": "opendeck/next-page.svg",
-						"plugin": "opendeck",
-						"uuid": "opendeck.nextpage",
+						"plugin": crate::constants::BUILTIN_PLUGIN,
+						"uuid": crate::constants::ACTION_NEXTPAGE,
 						"tooltip": "Go to the next page",
 						"controllers": [ "Keypad" ],
 						"states": [ { "image": "opendeck/next-page.svg" } ],
@@ -408,8 +411,8 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 					{
 						"name": "Previous Page",
 						"icon": "opendeck/previous-page.svg",
-						"plugin": "opendeck",
-						"uuid": "opendeck.previouspage",
+						"plugin": crate::constants::BUILTIN_PLUGIN,
+						"uuid": crate::constants::ACTION_PREVIOUSPAGE,
 						"tooltip": "Go to the previous page",
 						"controllers": [ "Keypad" ],
 						"states": [ { "image": "opendeck/previous-page.svg" } ],
@@ -421,8 +424,8 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 					{
 						"name": "Folder",
 						"icon": "opendeck/folder.svg",
-						"plugin": "opendeck",
-						"uuid": "opendeck.folder",
+						"plugin": crate::constants::BUILTIN_PLUGIN,
+						"uuid": crate::constants::ACTION_FOLDER,
 						"tooltip": "Open a folder of actions",
 						"controllers": [ "Keypad" ],
 						"states": [ { "image": "opendeck/folder.svg" } ],

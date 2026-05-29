@@ -1,6 +1,7 @@
 pub mod profiles;
 mod simplified_profile;
 
+use crate::constants::DIR_SETTINGS;
 use crate::shared::is_flatpak;
 
 use std::fs;
@@ -157,11 +158,11 @@ impl Default for Settings {
 impl NotProfile for Settings {}
 
 pub fn get_settings() -> Store<Settings> {
-	Store::new_concurrent("settings", &crate::shared::config_dir(), Settings::default())
+	Store::new_concurrent(DIR_SETTINGS, &crate::shared::config_dir(), Settings::default())
 }
 
 pub static SETTINGS_MUT: std::sync::LazyLock<tokio::sync::Mutex<Store<Settings>>> =
-	std::sync::LazyLock::new(|| tokio::sync::Mutex::new(Store::new_concurrent("settings", &crate::shared::config_dir(), Settings::default())));
+	std::sync::LazyLock::new(|| tokio::sync::Mutex::new(Store::new_concurrent(DIR_SETTINGS, &crate::shared::config_dir(), Settings::default())));
 
 #[cfg(test)]
 mod tests {

@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 
 use tiny_http::{Header, Response, Server};
 
+use crate::constants::{WS_PI_CHILD_SUFFIX, WS_PI_SUFFIX};
+
 fn mime(extension: &str) -> String {
 	match extension {
 		"htm" | "html" | "xhtml" => "text/html".to_owned(),
@@ -38,7 +40,7 @@ pub async fn init_webserver(prefix: PathBuf) {
 		}
 		#[cfg(target_os = "windows")]
 		let url = url[1..].replace('/', "\\");
-		let path = Path::new(url.trim_end_matches("|opendeck_property_inspector").trim_end_matches("|opendeck_property_inspector_child"));
+		let path = Path::new(url.trim_end_matches(WS_PI_SUFFIX).trim_end_matches(WS_PI_CHILD_SUFFIX));
 
 		if !matches!(tokio::fs::try_exists(path).await, Ok(true)) {
 			let _ = request.respond(Response::empty(404));
@@ -67,8 +69,8 @@ pub async fn init_webserver(prefix: PathBuf) {
 		// Instead, we have to inject a replacement window.open implementation that creates an IFrame element
 		// and requests the Svelte frontend to maximise the property inspector.
 
-		if url.ends_with("|opendeck_property_inspector") {
-			let path = &url[..url.len() - 28];
+		if url.ends_with(WS_PI_SUFFIX) {
+			let path = &url[..url.len() - WS_PI_SUFFIX.len()];
 
 			let mut content = tokio::fs::read_to_string(path).await.unwrap_or_default();
 			content += r#"
@@ -143,8 +145,8 @@ pub async fn init_webserver(prefix: PathBuf) {
 				value: "text/html".parse().unwrap(),
 			});
 			let _ = request.respond(response);
-		} else if url.ends_with("|opendeck_property_inspector_child") {
-			let path = &url[..url.len() - 34];
+		} else if url.ends_with(WS_PI_CHILD_SUFFIX) {
+			let path = &url[..url.len() - WS_PI_CHILD_SUFFIX.len()];
 
 			let mut content = tokio::fs::read_to_string(path).await.unwrap_or_default();
 			content = format!("<script>window.opener ??= window.parent;</script>{content}");

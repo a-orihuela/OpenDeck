@@ -4,7 +4,7 @@
 
 	<name>OpenDeck</name>
 	<summary>Use stream controllers</summary>
-	<developer id="OPENDECK_APP_ID"><name>Abraham Orihuela Mayor</name></developer>
+	<developer id="com.opendeck.app"><name>Abraham Orihuela Mayor</name></developer>
 	<launchable type="desktop-id">opendeck.desktop</launchable>
 
 	<url type="vcs-browser">https://github.com/a-orihuela/OpenDeck</url>

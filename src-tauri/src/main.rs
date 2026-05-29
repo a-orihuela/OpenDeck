@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod application_watcher;
+pub mod constants;
 mod device_sleep;
 mod elgato;
 mod events;
@@ -14,8 +15,8 @@ mod built_info {
 	include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
 
+use constants::{BINARY_NAME, PRODUCT_NAME, TRAY_ID, APP_ID, FILE_PORTS_LOCK};
 use events::frontend;
-use shared::PRODUCT_NAME;
 
 use std::sync::OnceLock;
 
@@ -221,7 +222,7 @@ async fn main() {
 			let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 			let separator = PredefinedMenuItem::separator(app)?;
 			let menu = MenuBuilder::new(app).items(&[&label, &separator, &show, &hide, &separator, &restart, &quit]).build()?;
-			let _tray = TrayIconBuilder::with_id("opendeck")
+			let _tray = TrayIconBuilder::with_id(TRAY_ID)
 				.menu(&menu)
 				.icon(app.default_window_icon().unwrap().clone())
 				.show_menu_on_left_click(false)
@@ -262,7 +263,7 @@ async fn main() {
 			tauri_plugin_log::Builder::default()
 				.targets([Target::new(TargetKind::LogDir { file_name: None }), Target::new(TargetKind::Stdout)])
 				.level(log::LevelFilter::Info)
-				.level_for("opendeck", log::LevelFilter::Trace)
+				.level_for(BINARY_NAME, log::LevelFilter::Trace)
 				.build(),
 		)
 		.plugin(tauri_plugin_cors_fetch::init())
@@ -328,7 +329,7 @@ async fn main() {
 						let _ = show_window(app);
 					}
 				})
-				.dbus_id("OPENDECK_APP_ID")
+				.dbus_id(APP_ID)
 				.build(),
 		)
 		.plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--hide"])))
@@ -353,12 +354,12 @@ async fn main() {
 		Err(error) => panic!("failed to build Tauri application: {}", error),
 	};
 
-	app.run(|app, event| {
+	app.run(|_app, event| {
 		if let tauri::RunEvent::Exit = event {
 			#[cfg(windows)]
 			futures::executor::block_on(plugins::deactivate_plugins());
 			tokio::spawn(elgato::reset_devices());
-			let _ = std::fs::remove_file(shared::config_dir().join("ports.json"));
+			let _ = std::fs::remove_file(shared::config_dir().join(FILE_PORTS_LOCK));
 		}
 	});
 }

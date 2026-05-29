@@ -33,6 +33,7 @@
 		{
 			"Icon": "icons/runCommand",
 			"Name": "Run Command",
+			"Category": "Automation",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -43,6 +44,7 @@
 		{
 			"Icon": "icons/openUrl",
 			"Name": "Open URL",
+			"Category": "Automation",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -53,6 +55,7 @@
 		{
 			"Icon": "icons/inputSimulation",
 			"Name": "Simulate Input",
+			"Category": "Automation",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -63,6 +66,7 @@
 		{
 			"Icon": "icons/switchProfile",
 			"Name": "Switch Profile",
+			"Category": "Productivity",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -71,8 +75,9 @@
 			"PropertyInspectorPath": "propertyInspector/switchProfile.html"
 		},
 		{
-			"Icon": "icons/deviceBrightness",
+			"Icon": "icons/brightnessUp",
 			"Name": "Brightness Up",
+			"Category": "System",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -81,8 +86,9 @@
 			"PropertyInspectorPath": "propertyInspector/brightnessUp.html"
 		},
 		{
-			"Icon": "icons/deviceBrightness",
+			"Icon": "icons/brightnessDown",
 			"Name": "Brightness Down",
+			"Category": "System",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -91,8 +97,9 @@
 			"PropertyInspectorPath": "propertyInspector/brightnessDown.html"
 		},
 		{
-			"Icon": "icons/runCommand",
+			"Icon": "icons/volumeUp",
 			"Name": "Volume Up",
+			"Category": "Media",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -100,8 +107,9 @@
 			"UUID": "opendeck.builtin.volumeup"
 		},
 		{
-			"Icon": "icons/runCommand",
+			"Icon": "icons/volumeDown",
 			"Name": "Volume Down",
+			"Category": "Media",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -109,26 +117,37 @@
 			"UUID": "opendeck.builtin.volumedown"
 		},
 		{
-			"Icon": "icons/runCommand",
+			"Icon": "icons/volumeOn",
 			"Name": "Mute",
-			"States": [{ "Image": "actionDefaultImage" }],
+			"Category": "Media",
+			"DisableAutomaticStates": true,
+			"States": [
+				{ "Image": "icons/volumeOn" },
+				{ "Image": "icons/mute" }
+			],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
 			"Tooltip": "Toggle system mute",
 			"UUID": "opendeck.builtin.mute"
 		},
 		{
-			"Icon": "icons/runCommand",
+			"Icon": "icons/play",
 			"Name": "Play / Pause",
-			"States": [{ "Image": "actionDefaultImage" }],
+			"Category": "Media",
+			"DisableAutomaticStates": true,
+			"States": [
+				{ "Image": "icons/play" },
+				{ "Image": "icons/pause" }
+			],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
 			"Tooltip": "Play or pause media playback",
 			"UUID": "opendeck.builtin.playpause"
 		},
 		{
-			"Icon": "icons/runCommand",
+			"Icon": "icons/nextTrack",
 			"Name": "Next Track",
+			"Category": "Media",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -136,8 +155,9 @@
 			"UUID": "opendeck.builtin.nexttrack"
 		},
 		{
-			"Icon": "icons/runCommand",
+			"Icon": "icons/prevTrack",
 			"Name": "Previous Track",
+			"Category": "Media",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -145,8 +165,9 @@
 			"UUID": "opendeck.builtin.prevtrack"
 		},
 		{
-			"Icon": "icons/runCommand",
+			"Icon": "icons/lockScreen",
 			"Name": "Lock Screen",
+			"Category": "System",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -154,8 +175,9 @@
 			"UUID": "opendeck.builtin.lockscreen"
 		},
 		{
-			"Icon": "icons/runCommand",
+			"Icon": "icons/sleep",
 			"Name": "Sleep",
+			"Category": "System",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -163,8 +185,9 @@
 			"UUID": "opendeck.builtin.sleep"
 		},
 		{
-			"Icon": "icons/runCommand",
+			"Icon": "icons/screenshot",
 			"Name": "Screenshot",
+			"Category": "System",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad", "Encoder"],
 			"SupportedInMultiActions": true,
@@ -173,8 +196,9 @@
 			"PropertyInspectorPath": "propertyInspector/screenshot.html"
 		},
 		{
-			"Icon": "icons/runCommand",
+			"Icon": "icons/pomodoro",
 			"Name": "Pomodoro Timer",
+			"Category": "Productivity",
 			"States": [{ "Image": "actionDefaultImage" }],
 			"Controllers": ["Keypad"],
 			"SupportedInMultiActions": false,

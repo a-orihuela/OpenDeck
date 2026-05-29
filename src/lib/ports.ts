@@ -1,6 +1,7 @@
 import { getPortBase } from "./api/commands.ts";
+import { PORT_BASE_DEFAULT } from "./constants.ts";
 
-let portBase = 57116;
+let portBase = PORT_BASE_DEFAULT;
 let initialised = false;
 
 export async function initPortBase(): Promise<void> {

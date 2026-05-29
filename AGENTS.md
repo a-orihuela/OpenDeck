@@ -180,7 +180,7 @@ Logs:   ~/.local/share/opendeck/logs/ (Linux) / ~/Library/Logs/opendeck/ (macOS)
 Plugins: <config_dir>/plugins/
 ```
 
-Flatpak uses different paths with `~/.var/app/OPENDECK_APP_ID/` prefix.
+Flatpak uses different paths with `~/.var/app/com.opendeck.app/` prefix.
 
 ## Frontend Architecture
 

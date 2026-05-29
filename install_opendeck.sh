@@ -2,7 +2,7 @@
 set -euo pipefail
 
 GITHUB_REPO="a-orihuela/OpenDeck"
-FLATHUB_APP_ID="OPENDECK_APP_ID"
+FLATHUB_APP_ID="com.opendeck.app"
 UDEV_RULES_URL="https://raw.githubusercontent.com/a-orihuela/OpenDeck/refs/heads/release/src-tauri/bundle/40-streamdeck.rules"
 
 if [ -t 1 ]; then

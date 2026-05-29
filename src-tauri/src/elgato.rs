@@ -182,7 +182,7 @@ pub async fn initialise_devices() {
 		crate::plugins::DEVICE_NAMESPACES
 			.write()
 			.await
-			.insert("sd".to_owned(), "opendeck_alternative_elgato_implementation".to_owned());
+			.insert("sd".to_owned(), crate::constants::WS_ALT_ELGATO.to_owned());
 		return;
 	} else {
 		crate::plugins::DEVICE_NAMESPACES.write().await.remove("sd");

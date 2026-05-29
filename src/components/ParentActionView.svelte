@@ -6,6 +6,7 @@
 
 	import { copiedItem, inspectedInstance, inspectedParentAction } from "$lib/propertyInspector";
 
+	import { ACTION_MULTIACTION, ACTION_TOGGLEACTION } from "$lib/constants";
 	import { createInstance, removeInstance as apiRemoveInstance } from "$lib/api/commands";
 	import { onMount, tick } from "svelte";
 
@@ -29,10 +30,10 @@
 
 	async function addAction(action: Action) {
 		if (
-			(parentUuid == "opendeck.multiaction" && !action.supported_in_multi_actions) ||
+			(parentUuid == ACTION_MULTIACTION && !action.supported_in_multi_actions) ||
 			(
-				parentUuid == "opendeck.toggleaction" &&
-				(action.uuid == "opendeck.multiaction" || action.uuid == "opendeck.toggleaction")
+				parentUuid == ACTION_TOGGLEACTION &&
+				(action.uuid == ACTION_MULTIACTION || action.uuid == ACTION_TOGGLEACTION)
 			)
 		) {
 			return;
@@ -111,7 +112,7 @@
 
 <div class="px-6 pt-6 pb-4 text-neutral-300">
 	<button class="float-right text-xl" on:click={() => $inspectedParentAction = null} aria-label="Close">✕</button>
-	<h1 class="font-semibold text-2xl">{parentUuid == "opendeck.toggleaction" ? "Toggle Action" : "Multi Action"}</h1>
+	<h1 class="font-semibold text-2xl">{parentUuid == ACTION_TOGGLEACTION ? "Toggle Action" : "Multi Action"}</h1>
 </div>
 
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
@@ -142,7 +143,7 @@
 				scale={3 / 4}
 				role="presentation"
 				tabindex={-1}
-				label={(parentUuid == "opendeck.toggleaction" ? "Toggle Action" : "Multi Action") + " action " + (index + 1)}
+				label={(parentUuid == ACTION_TOGGLEACTION ? "Toggle Action" : "Multi Action") + " action " + (index + 1)}
 			/>
 			<p class="ml-4 text-xl text-neutral-300">{instance.action.name}</p>
 			<button

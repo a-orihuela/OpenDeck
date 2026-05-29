@@ -24,7 +24,7 @@ pub static DEVICE_NAMESPACES: LazyLock<RwLock<HashMap<String, String>>> = LazyLo
 static INSTANCES: LazyLock<Mutex<HashMap<String, PluginInstance>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 pub static PORT_BASE: LazyLock<u16> = LazyLock::new(|| {
-	let lock_path = crate::shared::config_dir().join("ports.json");
+	let lock_path = crate::shared::config_dir().join(crate::constants::FILE_PORTS_LOCK);
 
 	// Try to reuse previously allocated ports from the lock file.
 	if let Ok(content) = std::fs::read_to_string(&lock_path) {
@@ -39,7 +39,7 @@ pub static PORT_BASE: LazyLock<u16> = LazyLock::new(|| {
 	}
 
 	// Scan for a free pair of ports and persist the result.
-	let mut base = 57116u16;
+	let mut base = crate::constants::PORT_BASE;
 	loop {
 		let ws_ok = std::net::TcpListener::bind(format!("127.0.0.1:{}", base)).is_ok();
 		let http_ok = std::net::TcpListener::bind(format!("127.0.0.1:{}", base + 2)).is_ok();
@@ -104,24 +104,14 @@ pub async fn initialise_plugin(path: path::PathBuf, spawner_tx: mpsc::Sender<Spa
 
 	{
 		let mut categories = CATEGORIES.write().await;
-		if let Some(category) = categories.get_mut(&manifest.category) {
-			for action in manifest.actions {
-				if let Some(index) = category.actions.iter().position(|v| v.uuid == action.uuid) {
-					category.actions.remove(index);
-				}
-				category.actions.push(action);
+		for action in manifest.actions {
+			let cat_name = action.category.as_deref().unwrap_or(&manifest.category).to_owned();
+			let cat_icon = if cat_name == manifest.category { manifest.category_icon.clone() } else { None };
+			let cat = categories.entry(cat_name).or_insert_with(|| Category { icon: cat_icon, actions: vec![] });
+			if let Some(index) = cat.actions.iter().position(|v| v.uuid == action.uuid) {
+				cat.actions.remove(index);
 			}
-		} else {
-			let mut category: Category = Category {
-				icon: manifest.category_icon,
-				actions: vec![],
-			};
-			for action in manifest.actions {
-				category.actions.push(action);
-			}
-			if !category.actions.is_empty() {
-				categories.insert(manifest.category, category);
-			}
+			cat.actions.push(action);
 		}
 	}
 
