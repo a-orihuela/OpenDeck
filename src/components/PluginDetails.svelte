@@ -11,15 +11,16 @@
 	import { marked } from "marked";
 	import markedAlert from "marked-alert";
 	import { baseUrl } from "marked-base-url";
-	import { onMount } from "svelte";
 
-	export let id: string;
-	export let details: { repository: string; name: string; author: string; download_url: string | undefined };
-	let readme = "<strong>Loading plugin details...</strong>";
-	let downloadCount = 0;
+	let { id, details, install, close }: {
+		id: string;
+		details: { repository: string; name: string; author: string; download_url: string | undefined };
+		install: () => void;
+		close: () => void;
+	} = $props();
 
-	export let install: () => void;
-	export let close: () => void;
+	let readme = $state("<strong>Loading plugin details...</strong>");
+	let downloadCount = $state(0);
 
 	function handleReadmeClick(event: MouseEvent | KeyboardEvent) {
 		const link = (event.target as HTMLElement).closest("a");
@@ -29,30 +30,33 @@
 		}
 	}
 
-	onMount(async () => {
+	$effect(() => {
 		const repo = details.repository.split("/")[3] + "/" + details.repository.split("/")[4];
 
-		const renderer = new marked.Renderer();
-		renderer.link = function (token) {
-			return marked.Renderer.prototype.link.call(this, token).replace("<a", `<a target="_blank" `);
-		};
-		marked.use({ renderer });
+		(async () => {
+			const renderer = new marked.Renderer();
+			renderer.link = function (token) {
+				return marked.Renderer.prototype.link.call(this, token).replace("<a", `<a target="_blank" `);
+			};
+			marked.use({ renderer });
 
-		const result = await fetchPluginReadme(repo);
-		if (result) {
-			marked.use(markedAlert());
-			marked.use(baseUrl(result.baseUrl));
-			readme = await marked.parse(DOMPurify.sanitize(result.markdown).replace(/<a/g, '<a target="_blank" '));
-		} else {
-			readme = await marked.parse(`**Plugin README file not found**\n\n[View plugin on GitHub](https://github.com/${repo})`);
-		}
+			const result = await fetchPluginReadme(repo);
+			if (result) {
+				marked.use(markedAlert());
+				marked.use(baseUrl(result.baseUrl));
+				readme = await marked.parse(DOMPurify.sanitize(result.markdown).replace(/<a/g, '<a target="_blank" '));
+			} else {
+				readme = await marked.parse(`**Plugin README file not found**\n\n[View plugin on GitHub](https://github.com/${repo})`);
+			}
 
-		downloadCount = await fetchTotalDownloadCount(repo);
+			downloadCount = await fetchTotalDownloadCount(repo);
+		})();
 	});
 </script>
 
 <Popup show label="{details.name} plugin details">
-	<button class="mr-2 my-1 float-right text-xl text-neutral-300" on:click={close} aria-label="Close">✕</button>
+	{#snippet children()}
+	<button class="mr-2 my-1 float-right text-xl text-neutral-300" onclick={close} aria-label="Close">✕</button>
 	<div class="flex flex-row items-start">
 		<img
 			src={"https://openactionapi.github.io/plugins/icons/" + id + ".png"}
@@ -71,7 +75,7 @@
 				<a
 					target="_blank"
 					href={"https://github.com/" + details.repository.split("/")[3]}
-					on:click={() => window.open("https://github.com/" + details.repository.split("/")[3])}
+					onclick={() => window.open("https://github.com/" + details.repository.split("/")[3])}
 					class="underline"
 				>
 					{details.author}
@@ -83,14 +87,14 @@
 
 			<div class="flex flex-row items-center mt-6">
 				<button
-					on:click={install}
+					onclick={install}
 					class="px-8 py-3 active:translate-y-0.5 text-lg text-neutral-100 bg-indigo-600 hover:bg-indigo-500 transition-colors border border-indigo-500 rounded-l-lg"
 				>
 					Install
 				</button>
 
 				<button
-					on:click={() => openUrl(details.download_url ?? details.repository + "/releases/latest")}
+					onclick={() => openUrl(details.download_url ?? details.repository + "/releases/latest")}
 					class="ml-1 p-3.5 active:translate-y-0.5 text-lg text-neutral-100 bg-indigo-600 hover:bg-indigo-500 transition-colors border border-indigo-500 rounded-r-lg"
 					aria-label="Download latest release from GitHub"
 				>
@@ -107,13 +111,14 @@
 		</div>
 	</div>
 
-	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		class="mt-4 p-6 plugin-readme text-neutral-300 border-4 border-neutral-600 rounded-xl"
-		on:click={handleReadmeClick}
-		on:keyup={handleReadmeClick}
+		onclick={handleReadmeClick}
+		onkeyup={handleReadmeClick}
 		role="region"
 	>
 		{@html readme}
 	</div>
+	{/snippet}
 </Popup>

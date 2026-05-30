@@ -3,8 +3,8 @@
 
 	import { getBuildInfo, restart } from "$lib/api/commands";
 
-	let buildInfo: string;
-	(async () => buildInfo = await getBuildInfo())();
+	let buildInfo = $state("");
+	(async () => { buildInfo = await getBuildInfo(); })();
 </script>
 
 <div class="flex flex-col justify-center items-center w-full h-full text-center text-neutral-300">
@@ -17,7 +17,7 @@
 		<p class="mb-4">You may need to install a plugin that adds support for your device.</p>
 		<button
 			class="px-2 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
-			on:click={() => restart()}
+			onclick={() => restart()}
 		>
 			Restart {PRODUCT_NAME}
 		</button>

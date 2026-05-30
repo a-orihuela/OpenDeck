@@ -1,13 +1,33 @@
 <script lang="ts">
-	export let icon: string;
-	export let name: string;
-	export let subtitle: string;
-	export let hidden: boolean = false;
-	export let disconnected: boolean = false;
-	export let action: () => void;
-	export let actionLabel: string = "";
-	export let secondaryAction: (() => void) | undefined = undefined;
-	export let secondaryActionLabel: string = "";
+	import type { Snippet } from "svelte";
+
+	let {
+		icon,
+		name,
+		subtitle,
+		hidden = false,
+		disconnected = false,
+		action,
+		actionLabel = "",
+		secondaryAction = undefined,
+		secondaryActionLabel = "",
+		children,
+		secondary,
+		subtitleSnippet,
+	}: {
+		icon: string;
+		name: string;
+		subtitle: string;
+		hidden?: boolean;
+		disconnected?: boolean;
+		action: () => void;
+		actionLabel?: string;
+		secondaryAction?: (() => void) | undefined;
+		secondaryActionLabel?: string;
+		children?: Snippet;
+		secondary?: Snippet;
+		subtitleSnippet?: Snippet;
+	} = $props();
 </script>
 
 <div
@@ -17,17 +37,17 @@
 	<img src={icon} class="w-24 h-24 rounded-lg" class:opacity-75={disconnected} alt={name} loading="lazy" />
 	<div class="ml-4 mr-2 text-neutral-300 wrap-anywhere" class:opacity-75={disconnected}>
 		<p class="font-semibold">{name}</p>
-		<slot name="subtitle">{subtitle}</slot>
+		{#if subtitleSnippet}{@render subtitleSnippet()}{:else}{subtitle}{/if}
 	</div>
 
 	<div class="flex flex-col ml-auto mr-4">
 		{#if secondaryAction}
-			<button on:click={secondaryAction} aria-label={secondaryActionLabel}>
-				<slot name="secondary" />
+			<button onclick={secondaryAction} aria-label={secondaryActionLabel}>
+				{@render secondary?.()}
 			</button>
 		{/if}
-		<button on:click={action} aria-label={actionLabel}>
-			<slot />
+		<button onclick={action} aria-label={actionLabel}>
+			{@render children?.()}
 		</button>
 	</div>
 </div>

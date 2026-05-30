@@ -8,10 +8,8 @@
 	import Trash from "phosphor-svelte/lib/Trash";
 	import InstanceEditor from "./InstanceEditor.svelte";
 
-	import { copiedItem, inspectedInstance, inspectedParentAction, openContextMenu } from "$lib/propertyInspector";
+	import { appState } from "$lib/propertyInspector";
 	import { CanvasLock, renderImage } from "$lib/rendererHelper";
-	import { settings } from "$lib/settings";
-	import { connectedPlugins } from "$lib/pluginStatus";
 	import { notify } from "$lib/notifications";
 
 	import { ACTION_FOLDER, ACTION_MULTIACTION, ACTION_TOGGLEACTION, BUILTIN_PLUGIN } from "$lib/constants";
@@ -19,33 +17,51 @@
 	import { onKeyMoved, onShowAlert, onShowOk, onUpdateState } from "$lib/api/events";
 	import { tick } from "svelte";
 
-	export let context: Context | null;
-	export let label: string = "";
-	export let tabindex: number = 0;
-	export let role: string = "gridcell";
+	let {
+		context,
+		label = "",
+		tabindex = 0,
+		role = "gridcell",
+		inslot = $bindable(null as ActionInstance | null),
+		active = true,
+		scale = 1,
+		isTouchPoint = false,
+		handlePaste = undefined,
+		size = 144,
+		ondragstart,
+		ondragover,
+		ondrop,
+	}: {
+		context: Context | null;
+		label?: string;
+		tabindex?: number;
+		role?: string;
+		inslot: ActionInstance | null;
+		active?: boolean;
+		scale?: number;
+		isTouchPoint?: boolean;
+		handlePaste?: ((item: CopiedItem, destination: Context) => Promise<void>) | undefined;
+		size?: number;
+		ondragstart?: (e: DragEvent) => void;
+		ondragover?: (e: DragEvent) => void;
+		ondrop?: (e: DragEvent) => void;
+	} = $props();
 
-	// One-way binding for slot data.
-	export let inslot: ActionInstance | null;
-	let slot: ActionInstance | null;
-	const update = (inslot: ActionInstance | null) => {
-		if (inslot && context && inslot.context.split(".")[0] != context.device) return;
-		slot = inslot;
+	let slot: ActionInstance | null = $state(null);
+	const updateSlot = (val: ActionInstance | null) => {
+		if (val && context && val.context.split(".")[0] != context.device) return;
+		slot = val;
 	};
-	$: update(inslot);
+	$effect(() => { updateSlot(inslot); });
 
-	export let active: boolean = true;
-	export let scale: number = 1;
-	export let isTouchPoint: boolean = false;
-	let pressed: boolean = false;
+	let pressed = $state(false);
+	let showAlert = $state(false);
+	let showOk = $state(false);
+	let showEditor = $state(false);
 
-	let state: ActionState | undefined;
-	$: {
-		if (!slot) {
-			state = undefined;
-		} else {
-			state = slot.states[slot.current_state];
-		}
-	}
+	const currentState: ActionState | undefined = $derived(slot != null ? (slot as ActionInstance).states[(slot as ActionInstance).current_state] : undefined);
+	const pluginOffline = $derived(slot != null && (slot as ActionInstance).action.plugin !== BUILTIN_PLUGIN && !appState.connectedPlugins.has((slot as ActionInstance).action.plugin));
+	const accessibleLabel = $derived(label + (slot != null ? ": " + (slot as ActionInstance).action.name + (currentState?.show && currentState?.text ? " - " + currentState.text : "") : ""));
 
 	onUpdateState((ctx, contents) => {
 		if (ctx == slot?.context) slot = contents;
@@ -55,11 +71,11 @@
 		if (JSON.stringify(context) == JSON.stringify(ctx)) pressed = isPressed;
 	});
 
-	function select(event: MouseEvent | KeyboardEvent) {
+	function handleSelect(event: MouseEvent | KeyboardEvent) {
 		if (event instanceof MouseEvent && event.ctrlKey) return;
-		$openContextMenu = null;
+		appState.openContextMenu = null;
 		if (!slot) {
-			$inspectedInstance = context;
+			appState.inspectedInstance = context;
 			return;
 		}
 		if (slot.action.uuid == ACTION_FOLDER && context) {
@@ -67,60 +83,58 @@
 			return;
 		}
 		if (slot.action.uuid == ACTION_MULTIACTION || slot.action.uuid == ACTION_TOGGLEACTION) {
-			$inspectedParentAction = context;
+			appState.inspectedParentAction = context;
 		} else {
-			$inspectedInstance = slot.context;
+			appState.inspectedInstance = slot.context;
 		}
 	}
 
-	function onfocus() {
-		$openContextMenu = null;
+	function handleFocus() {
+		appState.openContextMenu = null;
 		if (!slot) {
-			$inspectedInstance = context;
+			appState.inspectedInstance = context;
 			return;
 		}
 		if (slot.action.uuid != ACTION_MULTIACTION && slot.action.uuid != ACTION_TOGGLEACTION) {
-			$inspectedInstance = slot.context;
+			appState.inspectedInstance = slot.context;
 		} else {
-			$inspectedInstance = context;
+			appState.inspectedInstance = context;
 		}
 	}
 
-	let contextMenuEl: HTMLDivElement;
-	async function contextMenu(event: MouseEvent | KeyboardEvent) {
+	let contextMenuEl: HTMLDivElement | undefined = $state(undefined);
+	async function handleContextMenu(event: MouseEvent | KeyboardEvent) {
 		event.preventDefault();
 		if (!active || !context) return;
-		const rect = canvas.getBoundingClientRect();
-		let x = (event instanceof MouseEvent && event.x) ? event.x : rect.left;
-		let y = (event instanceof MouseEvent && event.y) ? event.y : rect.bottom;
-		$openContextMenu = { context, x, y };
+		const rect = canvas?.getBoundingClientRect();
+		let x = (event instanceof MouseEvent && event.x) ? event.x : rect?.left ?? 0;
+		let y = (event instanceof MouseEvent && event.y) ? event.y : rect?.bottom ?? 0;
+		appState.openContextMenu = { context, x, y };
 		await tick();
 		contextMenuEl?.querySelector("button")?.focus();
 	}
 
-	let showEditor = false;
 	function edit() {
-		$openContextMenu = null;
+		appState.openContextMenu = null;
 		showEditor = true;
 	}
 
 	function copy() {
-		$openContextMenu = null;
+		appState.openContextMenu = null;
 		if (!context || !slot) return;
-		copiedItem.set({ type: "instance", source: context });
+		appState.copiedItem = { type: "instance", source: context };
 	}
 
-	export let handlePaste: ((item: CopiedItem, destination: Context) => Promise<void>) | undefined = undefined;
 	async function paste() {
-		$openContextMenu = null;
-		if (!$copiedItem || !context || !handlePaste) return;
-		await handlePaste($copiedItem, context);
+		appState.openContextMenu = null;
+		if (!appState.copiedItem || !context || !handlePaste) return;
+		await handlePaste(appState.copiedItem, context);
 		await tick();
-		$inspectedInstance = `${context.device}.${context.profile}.${context.controller}.${context.position}.0`;
+		appState.inspectedInstance = `${context.device}.${context.profile}.${context.controller}.${context.position}.0`;
 	}
 
 	async function clear() {
-		$openContextMenu = null;
+		appState.openContextMenu = null;
 		if (!slot) return;
 		try {
 			await removeInstance(slot.context);
@@ -132,78 +146,82 @@
 		slot = null;
 		inslot = slot;
 		await tick();
-		$inspectedInstance = context;
+		appState.inspectedInstance = context;
 	}
 
-	let showAlert: boolean = false;
-	let showOk: boolean = false;
-	$: pluginOffline = !!slot && slot.action.plugin !== BUILTIN_PLUGIN && !$connectedPlugins.has(slot.action.plugin);
 	let timeouts: number[] = [];
 	onShowAlert((ctx) => {
 		if (!slot || ctx != slot.context) return;
 		timeouts.forEach(clearTimeout);
 		showOk = false;
 		showAlert = true;
-		timeouts.push(setTimeout(() => showAlert = false, 1.5e3));
+		timeouts.push(setTimeout(() => { showAlert = false; }, 1.5e3));
 	});
 	onShowOk((ctx) => {
 		if (!slot || ctx != slot.context) return;
 		timeouts.forEach(clearTimeout);
 		showAlert = false;
 		showOk = true;
-		timeouts.push(setTimeout(() => showOk = false, 1.5e3));
+		timeouts.push(setTimeout(() => { showOk = false; }, 1.5e3));
 	});
 
-	let canvas: HTMLCanvasElement;
+	let canvas: HTMLCanvasElement | undefined = $state(undefined);
 	let lock = new CanvasLock();
-	export let size = 144;
-	$: (async () => {
-		const sl = structuredClone(slot);
-		if (!sl) {
-			const unlock = await lock.lock();
-			try {
-				const ctx = canvas?.getContext("2d");
-				if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-				if (active) await updateImage(context as any, null);
-			} finally {
-				unlock();
-			}
-		} else {
-			const unlock = await lock.lock();
-			try {
-				let fallback = sl.action.states[sl.current_state]?.image ?? sl.action.icon;
-				if (state) await renderImage(canvas, context, state, fallback, showOk, showAlert || pluginOffline, true, active, pressed, $settings?.rotation);
-			} finally {
-				unlock();
-			}
-		}
-	})();
 
-	function clearAndRedraw() {
-		canvas?.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
-		slot = slot;
-	}
-	$: if ($settings?.rotation != undefined) {
-		clearAndRedraw();
-	}
+	$effect(() => {
+		const sl = structuredClone(slot);
+		const rotation = appState.settings?.rotation;
+		const st = currentState;
+		const sa = showAlert;
+		const so = showOk;
+		const po = pluginOffline;
+		const ac = active;
+		const pr = pressed;
+
+		(async () => {
+			if (!sl) {
+				const unlock = await lock.lock();
+				try {
+					const ctx = canvas?.getContext("2d");
+					if (ctx) ctx.clearRect(0, 0, canvas!.width, canvas!.height);
+					if (ac) await updateImage(context as any, null);
+				} finally {
+					unlock();
+				}
+			} else {
+				const unlock = await lock.lock();
+				try {
+					let fallback = sl.action.states[sl.current_state]?.image ?? sl.action.icon;
+					if (st) await renderImage(canvas!, context, st, fallback, so, sa || po, true, ac, pr, rotation);
+				} finally {
+					unlock();
+				}
+			}
+		})();
+	});
+
+	$effect(() => {
+		if (appState.settings?.rotation != undefined) {
+			canvas?.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+			slot = slot;
+		}
+	});
 
 	async function triggerVirtualPress() {
 		if (!active || !context || !slot) return;
 		await apiTriggerVirtualPress(context as any);
 	}
-
-	$: accessibleLabel = label + (slot ? ": " + slot.action.name + (state?.show && state?.text ? " - " + state.text : "") : "");
 </script>
 
 <div
 	class="relative"
-	style={`transform: scale(${(112 /* desired inner size */ / size) * scale});`}
+	style={`transform: scale(${(112 / size) * scale});`}
 >
 	<canvas
 		bind:this={canvas}
 		class="relative border-3 border-neutral-700 rounded-3xl outline-none outline-offset-2 outline-blue-500"
-		style={`margin: ${-((size + 3 * 2 /* border */ - 132 /* desired outer size */) / 2)}px;`}
-		class:outline-solid={active && ((slot && $inspectedInstance == slot.context) || (context && $inspectedInstance == context))}
+		style={`margin: ${-((size + 3 * 2 - 132) / 2)}px;`}
+		class:outline-solid={active && ((slot && appState.inspectedInstance == slot.context) || (context && appState.inspectedInstance == context))}
 		class:rounded-full!={context?.controller == "Encoder"}
 		class:bg-black={slot != null}
 		width={size}
@@ -212,42 +230,42 @@
 		{tabindex}
 		{role}
 		aria-label={accessibleLabel}
-		on:dragstart
-		on:dragover
-		on:drop
-		on:click|stopPropagation={select}
-		on:dblclick|stopPropagation={triggerVirtualPress}
-		on:keydown={(e) => {
+		{ondragstart}
+		{ondragover}
+		{ondrop}
+		onclick={(e) => { e.stopPropagation(); handleSelect(e); }}
+		ondblclick={(e) => { e.stopPropagation(); triggerVirtualPress(); }}
+		onkeydown={(e) => {
 			if (!active || !context) return;
-			if (e.key == "Enter") select(e);
+			if (e.key == "Enter") handleSelect(e);
 			else if (e.key == "F2") edit();
 			else if ((e.ctrlKey || e.metaKey) && e.key == "c") copy();
 			else if ((e.ctrlKey || e.metaKey) && e.key == "v") paste();
 			else if (e.key == "Delete") clear();
-			else if (e.key == "ContextMenu" || (e.shiftKey && e.key == "F10")) contextMenu(e);
+			else if (e.key == "ContextMenu" || (e.shiftKey && e.key == "F10")) handleContextMenu(e);
 		}}
-		on:keyup|stopPropagation={(e) => {
+		onkeyup={(e) => {
 			if (!active || !context) return;
-			if (e.key == " ") select(e);
+			if (e.key == " ") { e.stopPropagation(); handleSelect(e); }
 		}}
-		on:focus={onfocus}
-		on:contextmenu={contextMenu}
-	/>
+		onfocus={handleFocus}
+		oncontextmenu={handleContextMenu}
+	></canvas>
 	{#if isTouchPoint && !slot}
 		<div class="absolute left-1/4 top-1/2 w-1/2 border-t-4 border-neutral-700 pointer-events-none"></div>
 	{/if}
 </div>
 
-{#if $openContextMenu && $openContextMenu?.context == context}
+{#if appState.openContextMenu && appState.openContextMenu?.context == context}
 	<div
 		bind:this={contextMenuEl}
 		class="absolute w-32 font-semibold text-sm text-neutral-300 bg-neutral-700 border border-neutral-600 rounded-lg divide-y divide-neutral-600! z-10"
-		style={`left: ${$openContextMenu.x}px; top: ${$openContextMenu.y}px;`}
+		style={`left: ${appState.openContextMenu.x}px; top: ${appState.openContextMenu.y}px;`}
 	>
 		{#if !slot}
 			<button
 				class="flex flex-row items-center w-full p-2 hover:bg-neutral-600 transition-colors rounded-lg cursor-pointer"
-				on:click|stopPropagation={paste}
+				onclick={(e) => { e.stopPropagation(); paste(); }}
 			>
 				<Clipboard size="18" class="text-neutral-300" />
 				<span class="ml-2"> Paste </span>
@@ -255,21 +273,21 @@
 		{:else}
 			<button
 				class="flex flex-row items-center w-full p-2 hover:bg-neutral-600 transition-colors rounded-t-lg cursor-pointer"
-				on:click|stopPropagation={edit}
+				onclick={(e) => { e.stopPropagation(); edit(); }}
 			>
 				<Pencil size="18" class="text-neutral-300" />
 				<span class="ml-2"> Edit </span>
 			</button>
 			<button
 				class="flex flex-row items-center w-full p-2 hover:bg-neutral-600 transition-colors cursor-pointer"
-				on:click|stopPropagation={copy}
+				onclick={(e) => { e.stopPropagation(); copy(); }}
 			>
 				<Copy size="18" class="text-neutral-300" />
 				<span class="ml-2"> Copy </span>
 			</button>
 			<button
 				class="flex flex-row items-center w-full p-2 hover:bg-neutral-600 transition-colors rounded-b-lg cursor-pointer"
-				on:click|stopPropagation={clear}
+				onclick={(e) => { e.stopPropagation(); clear(); }}
 			>
 				<Trash size="18" class="text-red-400" />
 				<span class="ml-2"> Delete </span>

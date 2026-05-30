@@ -13,8 +13,10 @@
 	import Tooltip from "./Tooltip.svelte";
 
 	import { getWebserverUrl } from "$lib/ports";
-	import { localisations, settings } from "$lib/settings";
+	import { appState } from "$lib/settings";
 	import { actionList, deviceSelector, PRODUCT_NAME } from "$lib/singletons";
+	import { get } from "svelte/store";
+	import { untrack } from "svelte";
 
 	import { installPlugin as apiInstallPlugin, listPlugins, openLogDirectory, reloadPlugin, removePlugin as apiRemovePlugin, showSettingsInterface } from "$lib/api/commands";
 	import { onPluginInstallProgress } from "$lib/api/events";
@@ -30,12 +32,16 @@
 	import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 	import { ask, message, open } from "@tauri-apps/plugin-dialog";
 
-	let showPopup: boolean;
-	setInterval(async () => {
-		if (showPopup) installed = await listPlugins();
-	}, 1e3);
+	let showPopup = $state(false);
 
-	let installProgress: { downloaded: number; total: number | null } | null = null;
+	$effect(() => {
+		const interval = setInterval(async () => {
+			if (showPopup) installed = await listPlugins();
+		}, 1e3);
+		return () => clearInterval(interval);
+	});
+
+	let installProgress: { downloaded: number; total: number | null } | null = $state(null);
 	onPluginInstallProgress((downloaded, total) => {
 		installProgress = { downloaded, total };
 	});
@@ -46,7 +52,7 @@
 		try {
 			await apiInstallPlugin(url, file, fallback_id);
 			message(`Successfully installed "${name}".`, { title: `Installed "${name}"` });
-			$actionList?.reload();
+			get(actionList)?.reload();
 			installed = await listPlugins();
 		} catch (error: any) {
 			message(error, { title: `Failed to install "${name}"` });
@@ -55,10 +61,10 @@
 		}
 	}
 
-	let choices: any[] | undefined;
-	let choice: number;
-	let finishChoice = (_: unknown) => {};
-	let cancelChoice = () => {};
+	let choices: any[] | undefined = $state(undefined);
+	let choice = $state(0);
+	let finishChoice = $state((_: unknown) => {});
+	let cancelChoice = $state(() => {});
 	async function chooseAsset(assets: any[]): Promise<any> {
 		choices = assets;
 		try {
@@ -76,7 +82,7 @@
 		return assets[choice];
 	}
 
-	let openDetailsView: string | null = null;
+	let openDetailsView: string | null = $state(null);
 
 	async function installPluginGitHub(id: string, plugin: GitHubPlugin) {
 		if (plugin.download_url) {
@@ -115,46 +121,58 @@
 		try {
 			await apiRemovePlugin(plugin.id);
 			message(`Successfully removed "${plugin.name}".`, { title: `Removed "${plugin.name}"` });
-			$actionList?.reload();
-			$deviceSelector?.reloadProfiles();
+			get(actionList)?.reload();
+			get(deviceSelector)?.reloadProfiles();
 			installed = await listPlugins();
 		} catch (error: any) {
 			message(error, { title: `Failed to remove "${plugin.name}"` });
 		}
 	}
 
-	let installed: any[] = [];
-	(async () => installed = await listPlugins())();
+	let installed: any[] = $state([]);
+	(async () => { installed = await listPlugins(); })();
 
-	let plugins: Record<string, GitHubPlugin>;
-	(async () => plugins = await fetchOpenSourceCatalogue())();
+	let plugins: Record<string, GitHubPlugin> | null = $state(null);
+	(async () => { plugins = await fetchOpenSourceCatalogue(); })();
 
-	let showArchive: boolean = false;
-	let archivePlugins: any[] | null = null;
+	let showArchive = $state(false);
+	let archivePlugins: any[] | null = $state(null);
 
-	let availableUpdates: { [id: string]: string | false } = {};
-	let checkedPlugins = new Set<string>();
-	$: if (showPopup) {
-		for (const plugin of installed) {
-			if (!checkedPlugins.has(plugin.id)) {
-				checkedPlugins.add(plugin.id);
-				checkUpdateAvailable(plugin, plugins ?? {})
-					.then((version) => availableUpdates = { ...availableUpdates, [plugin.id]: version });
+	let availableUpdates: { [id: string]: string | false } = $state({});
+	let checkedPlugins = $state(new Set<string>());
+
+	$effect(() => {
+		if (showPopup) {
+			for (const plugin of installed) {
+				if (!untrack(() => checkedPlugins.has(plugin.id))) {
+					untrack(() => {
+						checkedPlugins.add(plugin.id);
+						checkedPlugins = new Set(checkedPlugins);
+					});
+					checkUpdateAvailable(plugin, untrack(() => plugins) ?? {})
+						.then((version) => { untrack(() => { availableUpdates = { ...availableUpdates, [plugin.id]: version }; }); });
+				}
 			}
 		}
-	}
+	});
 
-	let pluginVersions: { [id: string]: string } = {};
-	$: for (const plugin of installed) {
-		if (pluginVersions[plugin.id] != plugin.version) {
-			checkedPlugins.delete(plugin.id);
-			delete availableUpdates[plugin.id];
-			availableUpdates = availableUpdates;
-			pluginVersions[plugin.id] = plugin.version;
+	$effect(() => {
+		for (const plugin of installed) {
+			const pv = untrack(() => pluginVersions[plugin.id]);
+			if (pv != plugin.version) {
+				untrack(() => {
+					checkedPlugins.delete(plugin.id);
+					checkedPlugins = new Set(checkedPlugins);
+					delete availableUpdates[plugin.id];
+					availableUpdates = { ...availableUpdates };
+					pluginVersions[plugin.id] = plugin.version;
+				});
+			}
 		}
-	}
+	});
 
-	let query: string = "";
+	let pluginVersions: { [id: string]: string } = $state({});
+	let query = $state("");
 
 	onOpenUrl((urls: string[]) => {
 		const id = parseInstallPluginUrl(urls[0]);
@@ -165,13 +183,13 @@
 
 <button
 	class="px-3 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
-	on:click={() => showPopup = true}
+	onclick={() => { showPopup = true; }}
 >
 	Plugins
 </button>
 
 <svelte:window
-	on:keydown={(event) => {
+	onkeydown={(event) => {
 		if (event.key == "Escape") {
 			if (choices) cancelChoice();
 			else if (openDetailsView) openDetailsView = null;
@@ -181,7 +199,8 @@
 />
 
 <Popup show={showPopup} label="Manage plugins">
-	<button class="mr-2 my-1 float-right text-xl text-neutral-300" on:click={() => showPopup = false} aria-label="Close">✕</button>
+	{#snippet children()}
+	<button class="mr-2 my-1 float-right text-xl text-neutral-300" onclick={() => { showPopup = false; }} aria-label="Close">✕</button>
 	<h2 class="m-2 font-semibold text-xl text-neutral-300">Manage plugins</h2>
 
 	{#if installProgress}
@@ -214,44 +233,46 @@
 		) as plugin}
 			<ListedPlugin
 				icon={getWebserverUrl(plugin.icon)}
-				name={($localisations && $localisations[plugin.id] && $localisations[plugin.id].Name) ? $localisations[plugin.id].Name : plugin.name}
+				name={(appState.localisations?.[plugin.id]?.Name) ?? plugin.name}
 				subtitle={plugin.version}
 				disconnected={!plugin.registered}
 				action={() => {
-					if ($settings?.developer) reloadPlugin(plugin.id);
+					if (appState.settings?.developer) reloadPlugin(plugin.id);
 					else confirmRemovePlugin(plugin);
 				}}
-				actionLabel={$settings?.developer ? "Reload" : "Remove"}
+				actionLabel={appState.settings?.developer ? "Reload" : "Remove"}
 				secondaryAction={!plugin.registered ? () => openLogDirectory() : plugin.has_settings_interface ? () => showSettingsInterface(plugin.id) : undefined}
 				secondaryActionLabel={!plugin.registered ? "View logs" : "Settings"}
 			>
-				<svelte:fragment slot="subtitle">
+				{#snippet subtitleSnippet()}
 					{plugin.version}
 					{#if availableUpdates[plugin.id]}
 						(<span class="text-yellow-400">
 							available:
 							<button
 								class="font-semibold underline"
-								on:click={() => openDetailsView = plugin.id.endsWith(".sdPlugin") ? plugin.id.slice(0, -9) : plugin.id}
+								onclick={() => { openDetailsView = plugin.id.endsWith(".sdPlugin") ? plugin.id.slice(0, -9) : plugin.id; }}
 							>
 								{availableUpdates[plugin.id]}
 							</button></span>)
 					{/if}
-				</svelte:fragment>
+				{/snippet}
 
-				<svelte:fragment slot="secondary">
+				{#snippet secondary()}
 					{#if !plugin.registered}
 						<WarningCircle size="24" class="text-yellow-500" />
 					{:else if plugin.has_settings_interface}
 						<Gear size="24" class="text-green-600" />
 					{/if}
-				</svelte:fragment>
+				{/snippet}
 
-				{#if $settings?.developer}
-					<ArrowClockwise size="24" class="mt-2 text-neutral-400" />
-				{:else if !plugin.builtin}
-					<Trash size="24" class="mt-2 text-neutral-400" />
-				{/if}
+				{#snippet children()}
+					{#if appState.settings?.developer}
+						<ArrowClockwise size="24" class="mt-2 text-neutral-400" />
+					{:else if !plugin.builtin}
+						<Trash size="24" class="mt-2 text-neutral-400" />
+					{/if}
+				{/snippet}
 			</ListedPlugin>
 		{/each}
 	</div>
@@ -260,7 +281,7 @@
 		<h2 class="text-lg text-neutral-400">Plugin store</h2>
 		<button
 			class="flex flex-row items-center mt-2 px-1 py-0.5 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
-			on:click={installPluginFile}
+			onclick={installPluginFile}
 		>
 			<FileArrowUp />
 			<span class="ml-1">Install from file</span>
@@ -291,7 +312,8 @@
 	{:else}
 		<div class="flex flex-row items-center ml-2 mt-6 mb-2 space-x-2">
 			<h2 class="font-semibold text-md text-neutral-400">Open-source plugins</h2>
-			<Tooltip>Open-source plugins downloaded from the author's releases</Tooltip>
+			{#snippet tooltipOss()}Open-source plugins downloaded from the author's releases{/snippet}
+			<Tooltip>{@render tooltipOss()}</Tooltip>
 		</div>
 		<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 			{#each Object.entries(plugins) as [id, plugin]}
@@ -300,10 +322,12 @@
 					name={plugin.name}
 					subtitle={plugin.author}
 					hidden={!plugin.name.toLowerCase().includes(query.toLowerCase())}
-					action={() => openDetailsView = id}
+					action={() => { openDetailsView = id; }}
 					actionLabel="View details"
 				>
-					<ArrowSquareOut size="24" class="text-neutral-400" />
+					{#snippet children()}
+						<ArrowSquareOut size="24" class="text-neutral-400" />
+					{/snippet}
 				</ListedPlugin>
 			{/each}
 		</div>
@@ -311,12 +335,13 @@
 
 	<div class="flex flex-row items-center mt-6 mb-2">
 		<h2 class="mx-2 font-semibold text-md text-neutral-400">Elgato App Store archive</h2>
-		<Tooltip>Plugins archived from the Elgato App Store (now replaced by the Elgato Marketplace)</Tooltip>
+		{#snippet tooltipElgato()}Plugins archived from the Elgato App Store (now replaced by the Elgato Marketplace){/snippet}
+		<Tooltip>{@render tooltipElgato()}</Tooltip>
 	</div>
 	{#if !showArchive}
 		<button
 			class="ml-2 mt-2 mb-2 px-2 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
-			on:click={async () => {
+			onclick={async () => {
 				showArchive = true;
 				archivePlugins = await fetchElgatoArchive();
 			}}
@@ -336,7 +361,9 @@
 					action={() => installPluginElgato(plugin)}
 					actionLabel="Install"
 				>
-					<CloudArrowDown size="24" class="text-neutral-400" />
+					{#snippet children()}
+						<CloudArrowDown size="24" class="text-neutral-400" />
+					{/snippet}
 				</ListedPlugin>
 			{/each}
 		</div>
@@ -345,7 +372,8 @@
 	{#if "Tacto Connect".toLowerCase().includes(query.toLowerCase())}
 		<div class="flex flex-row items-center mt-6 mb-2">
 			<h2 class="mx-2 font-semibold text-md text-neutral-400">Tacto</h2>
-			<Tooltip>Turn your phone or keyboard into a control centre for your computer</Tooltip>
+			{#snippet tooltipTacto()}Turn your phone or keyboard into a control centre for your computer{/snippet}
+			<Tooltip>{@render tooltipTacto()}</Tooltip>
 		</div>
 		<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 			<ListedPlugin
@@ -364,17 +392,19 @@
 				secondaryAction={() => window.open("https://tacto.live")}
 				secondaryActionLabel="Visit website"
 			>
-				<svelte:fragment slot="secondary">
+				{#snippet secondary()}
 					<ArrowSquareOut size="24" class="text-neutral-400" />
-				</svelte:fragment>
-
-				<CloudArrowDown size="24" class="mt-2 text-neutral-400" />
+				{/snippet}
+				{#snippet children()}
+					<CloudArrowDown size="24" class="mt-2 text-neutral-400" />
+				{/snippet}
 			</ListedPlugin>
 		</div>
 	{/if}
+	{/snippet}
 </Popup>
 
-{#if openDetailsView}
+{#if openDetailsView && plugins?.[openDetailsView]}
 	<PluginDetails
 		id={openDetailsView}
 		details={plugins[openDetailsView]}
@@ -382,7 +412,7 @@
 			// @ts-expect-error
 			installPluginGitHub(openDetailsView, plugins[openDetailsView]);
 		}}
-		close={() => openDetailsView = null}
+		close={() => { openDetailsView = null; }}
 	/>
 {/if}
 
@@ -391,14 +421,14 @@
 		<h3 class="mb-2 font-semibold text-lg text-center">Choose a release asset</h3>
 		<div class="select-wrapper">
 			<select class="w-full bg-neutral-800!" bind:value={choice} aria-label="Release asset">
-				{#each choices as choice, i}
-					<option value={i}>{choice.name}</option>
+				{#each choices as c, i}
+					<option value={i}>{c.name}</option>
 				{/each}
 			</select>
 		</div>
 		<button
 			class="mt-2 p-1 w-full text-sm text-neutral-300 bg-neutral-800 hover:bg-neutral-900 transition-colors border border-neutral-600 rounded-lg"
-			on:click={finishChoice}
+			onclick={finishChoice}
 		>
 			Install
 		</button>

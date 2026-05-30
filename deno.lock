@@ -7,25 +7,15 @@
     "jsr:@std/path@^1.1.4": "1.1.4",
     "npm:@sveltejs/adapter-static@3": "3.0.10_@sveltejs+kit@2.50.2__@sveltejs+vite-plugin-svelte@3.1.2___svelte@4.2.20___vite@5.4.21____lightningcss@1.31.1___lightningcss@1.31.1__svelte@4.2.20__typescript@5.9.3__vite@5.4.21___lightningcss@1.31.1__acorn@8.15.0__lightningcss@1.31.1_@sveltejs+vite-plugin-svelte@3.1.2__svelte@4.2.20__vite@5.4.21___lightningcss@1.31.1__lightningcss@1.31.1_svelte@4.2.20_typescript@5.9.3_vite@5.4.21__lightningcss@1.31.1_lightningcss@1.31.1",
     "npm:@sveltejs/kit@^2.50.0": "2.50.2_@sveltejs+vite-plugin-svelte@3.1.2__svelte@4.2.20__vite@5.4.21___lightningcss@1.31.1__lightningcss@1.31.1_svelte@4.2.20_typescript@5.9.3_vite@5.4.21__lightningcss@1.31.1_acorn@8.15.0_lightningcss@1.31.1",
-    "npm:@sveltejs/vite-plugin-svelte@^3.1.0": "3.1.2_svelte@4.2.20_vite@5.4.21__lightningcss@1.31.1_lightningcss@1.31.1",
     "npm:@tailwindcss/vite@^4.1.0": "4.1.18_vite@5.4.21__lightningcss@1.31.1_lightningcss@1.31.1",
-    "npm:@tauri-apps/api@^2.10.0": "2.10.1",
     "npm:@tauri-apps/cli@^2.10.0": "2.10.0",
-    "npm:@tauri-apps/plugin-deep-link@^2.4.0": "2.4.7",
-    "npm:@tauri-apps/plugin-dialog@^2.6.0": "2.6.0",
-    "npm:@vitest/coverage-v8@^2.1.9": "2.1.9_vitest@2.1.9",
     "npm:dompurify@^3.3.0": "3.3.1",
     "npm:lightningcss@^1.31.0": "1.31.1",
     "npm:marked-alert@^2.1.0": "2.1.2_marked@17.0.1",
     "npm:marked-base-url@^1.1.0": "1.1.8_marked@17.0.1",
     "npm:marked@17": "17.0.1",
-    "npm:phosphor-svelte@2": "2.0.1_svelte@4.2.20",
-    "npm:svelte-check@^4.3.0": "4.3.6_svelte@4.2.20_typescript@5.9.3",
-    "npm:svelte@^4.2.0": "4.2.20",
     "npm:tailwindcss@^4.1.0": "4.1.18",
-    "npm:typescript@^5.9.0": "5.9.3",
-    "npm:vite@^5.4.0": "5.4.21_lightningcss@1.31.1",
-    "npm:vitest@^2.1.9": "2.1.9"
+    "npm:typescript@^5.9.0": "5.9.3"
   },
   "jsr": {
     "@std/fs@1.0.22": {
@@ -1533,25 +1523,25 @@
       "dependencies": [
         "npm:@sveltejs/adapter-static@3",
         "npm:@sveltejs/kit@^2.50.0",
-        "npm:@sveltejs/vite-plugin-svelte@^3.1.0",
+        "npm:@sveltejs/vite-plugin-svelte@^6.2.4",
         "npm:@tailwindcss/vite@^4.1.0",
-        "npm:@tauri-apps/api@^2.10.0",
+        "npm:@tauri-apps/api@2.10",
         "npm:@tauri-apps/cli@^2.10.0",
-        "npm:@tauri-apps/plugin-deep-link@^2.4.0",
-        "npm:@tauri-apps/plugin-dialog@^2.6.0",
-        "npm:@vitest/coverage-v8@^2.1.9",
+        "npm:@tauri-apps/plugin-deep-link@2.4",
+        "npm:@tauri-apps/plugin-dialog@2.6",
+        "npm:@vitest/coverage-v8@^3.2.4",
         "npm:dompurify@^3.3.0",
         "npm:lightningcss@^1.31.0",
         "npm:marked-alert@^2.1.0",
         "npm:marked-base-url@^1.1.0",
         "npm:marked@17",
-        "npm:phosphor-svelte@2",
-        "npm:svelte-check@^4.3.0",
-        "npm:svelte@^4.2.0",
+        "npm:phosphor-svelte@^3.1.0",
+        "npm:svelte-check@^4.4.8",
+        "npm:svelte@5",
         "npm:tailwindcss@^4.1.0",
         "npm:typescript@^5.9.0",
-        "npm:vite@^5.4.0",
-        "npm:vitest@^2.1.9"
+        "npm:vite@^6.4.2",
+        "npm:vitest@^3.2.4"
       ]
     }
   }

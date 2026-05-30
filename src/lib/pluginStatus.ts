@@ -1,1 +1,1 @@
-export { connectedPlugins } from "./state/appState.ts";
+export { appState } from "./state/appState.svelte.ts";

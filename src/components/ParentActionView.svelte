@@ -4,24 +4,23 @@
 	import Trash from "phosphor-svelte/lib/Trash";
 	import Key from "./Key.svelte";
 
-	import { copiedItem, inspectedInstance, inspectedParentAction } from "$lib/propertyInspector";
+	import { appState } from "$lib/propertyInspector";
 
 	import { ACTION_MULTIACTION, ACTION_TOGGLEACTION } from "$lib/constants";
 	import { createInstance, removeInstance as apiRemoveInstance } from "$lib/api/commands";
-	import { onMount, tick } from "svelte";
+	import { tick } from "svelte";
 
-	export let profile: Profile;
+	let { profile = $bindable() }: { profile: Profile } = $props();
 
-	let listEl: HTMLDivElement;
-	onMount(() => {
+	let listEl: HTMLDivElement | undefined = $state(undefined);
+
+	$effect(() => {
 		const first = listEl?.querySelector("[role='listitem']") as HTMLElement | null;
 		first?.focus();
 	});
 
-	let children: ActionInstance[];
-	$: children = profile.keys[$inspectedParentAction!.position]!.children!;
-	let parentUuid: string;
-	$: parentUuid = profile.keys[$inspectedParentAction!.position]!.action.uuid;
+	const children = $derived(profile.keys[appState.inspectedParentAction!.position]!.children!);
+	const parentUuid = $derived(profile.keys[appState.inspectedParentAction!.position]!.action.uuid);
 
 	function handleDragOver(event: DragEvent) {
 		event.preventDefault();
@@ -38,26 +37,26 @@
 		) {
 			return;
 		}
-		let response: ActionInstance | null = await createInstance($inspectedParentAction!, action);
-		if (response) profile.keys[$inspectedParentAction!.position] = response;
+		let response: ActionInstance | null = await createInstance(appState.inspectedParentAction!, action as any);
+		if (response) profile.keys[appState.inspectedParentAction!.position] = response;
 	}
 
 	async function handleDrop({ dataTransfer }: DragEvent) {
 		if (dataTransfer?.getData("action")) {
-			let action = JSON.parse(dataTransfer?.getData("action"));
+			let action = JSON.parse(dataTransfer.getData("action"));
 			await addAction(action);
 		}
 	}
 
 	async function handlePaste() {
-		if (!$copiedItem || $copiedItem.type != "action") return;
-		await addAction($copiedItem.action);
+		if (!appState.copiedItem || appState.copiedItem.type != "action") return;
+		await addAction(appState.copiedItem!.action);
 	}
 
 	async function removeInstance(index: number, refocus = false) {
 		await apiRemoveInstance(children[index].context);
 		children.splice(index, 1);
-		profile.keys[$inspectedParentAction!.position]!.children = children;
+		profile.keys[appState.inspectedParentAction!.position]!.children = children;
 
 		if (!refocus) return;
 
@@ -105,32 +104,32 @@
 </script>
 
 <svelte:window
-	on:keydown={(event) => {
-		if (event.key == "Escape") $inspectedParentAction = null;
+	onkeydown={(event) => {
+		if (event.key == "Escape") appState.inspectedParentAction = null;
 	}}
 />
 
 <div class="px-6 pt-6 pb-4 text-neutral-300">
-	<button class="float-right text-xl" on:click={() => $inspectedParentAction = null} aria-label="Close">✕</button>
+	<button class="float-right text-xl" onclick={() => { appState.inspectedParentAction = null; }} aria-label="Close">✕</button>
 	<h1 class="font-semibold text-2xl">{parentUuid == ACTION_TOGGLEACTION ? "Toggle Action" : "Multi Action"}</h1>
 </div>
 
-<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
 	bind:this={listEl}
 	class="flex flex-col h-128 overflow-auto"
-	on:click={() => $inspectedInstance = null}
+	onclick={() => { appState.inspectedInstance = null; }}
 	role="list"
 	aria-label="{parentUuid == 'omegadeck.toggleaction' ? 'Toggle Action' : 'Multi Action'} children"
-	on:keydown={handleListKeydown}
+	onkeydown={handleListKeydown}
 >
 	{#each children as instance, index}
-		<!-- svelte-ignore a11y-no-noninteractive-tabindex a11y-no-noninteractive-element-interactions -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
 		<div
 			class="flex flex-row items-center mx-4 my-2 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg focus-within:outline-solid focus-within:outline-offset-2 focus-within:outline-blue-500"
-			on:click|stopPropagation={() => $inspectedInstance = instance.context}
-			on:focus|stopPropagation={() => $inspectedInstance = instance.context}
-			on:keydown={(e) => {
+			onclick={(e) => { e.stopPropagation(); appState.inspectedInstance = instance.context; }}
+			onfocus={(e) => { e.stopPropagation(); appState.inspectedInstance = instance.context; }}
+			onkeydown={(e) => {
 				if (e.key == "Delete") removeInstance(index, true);
 			}}
 			role="listitem"
@@ -148,7 +147,7 @@
 			<p class="ml-4 text-xl text-neutral-300">{instance.action.name}</p>
 			<button
 				class="ml-auto mr-10"
-				on:click|stopPropagation={() => removeInstance(index)}
+				onclick={(e) => { e.stopPropagation(); removeInstance(index); }}
 				tabindex={-1}
 				aria-label="Remove {instance.action.name}"
 			>
@@ -156,14 +155,14 @@
 			</button>
 		</div>
 	{/each}
-	<!-- svelte-ignore a11y-no-noninteractive-tabindex a11y-no-noninteractive-element-interactions -->
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
 	<div
 		class="flex flex-row items-center mx-4 mt-2 mb-4 p-3 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-dashed border-neutral-600 rounded-lg focus-within:outline-solid focus-within:outline-offset-2 focus-within:outline-blue-500"
-		on:dragover={handleDragOver}
-		on:drop={handleDrop}
-		on:click={() => $inspectedInstance = null}
-		on:focus={() => $inspectedInstance = null}
-		on:keydown={(e) => {
+		ondragover={handleDragOver}
+		ondrop={handleDrop}
+		onclick={() => { appState.inspectedInstance = null; }}
+		onfocus={() => { appState.inspectedInstance = null; }}
+		onkeydown={(e) => {
 			if ((e.ctrlKey || e.metaKey) && e.key == "v") handlePaste();
 		}}
 		role="listitem"

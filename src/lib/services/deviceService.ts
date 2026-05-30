@@ -1,5 +1,5 @@
 import type { ActionInstance, Context, DeviceInfo } from "../bindings.ts";
-import type { CopiedItem } from "../state/appState.ts";
+import type { CopiedItem } from "../state/appState.svelte.ts";
 import { createInstance, moveInstance } from "../api/commands.ts";
 
 // ── Grid navigation helpers ───────────────────────────────────────────────────

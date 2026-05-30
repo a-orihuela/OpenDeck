@@ -5,29 +5,29 @@
 
 	import { ACTION_FOLDER, ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE } from "$lib/constants";
 	import { getWebserverUrl } from "$lib/ports";
-	import { copiedItem } from "$lib/propertyInspector";
-	import { localisations } from "$lib/settings";
+	import { appState } from "$lib/propertyInspector";
+	
 
 	import { getCategories } from "$lib/api/commands";
 
-	import { inFolderMode } from "$lib/singletons";
+	
 
 	const FOLDER_FORBIDDEN_ACTIONS = new Set([ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE, ACTION_FOLDER]);
 
-	let categories: { [name: string]: { icon?: string; actions: Action[] } } = {};
+	let categories: { [name: string]: { icon?: string | null; actions: Action[] } } = $state({});
 	export async function reload() {
 		categories = await getCategories();
 	}
 	reload();
 
-	let query: string = "";
-	let filteredCategories: [string, { icon?: string; actions: Action[] }][] = [];
-	$: {
-		let lowerCaseQuery = query.toLowerCase().trim();
-		filteredCategories = Object.entries(categories)
+	let query = $state("");
+
+	const filteredCategories = $derived.by(() => {
+		const lowerCaseQuery = query.toLowerCase().trim();
+		return Object.entries(categories)
 			.sort((a, b) => a[0].localeCompare(b[0]))
-			.map(([categoryName, { icon, actions }]): [string, { icon?: string; actions: Action[] }] => {
-				if ($inFolderMode) {
+			.map(([categoryName, { icon, actions }]): [string, { icon?: string | null; actions: Action[] }] => {
+				if (appState.inFolderMode) {
 					actions = actions.filter((action) => !FOLDER_FORBIDDEN_ACTIONS.has(action.uuid));
 				}
 				if (!categoryName.toLowerCase().includes(lowerCaseQuery)) {
@@ -36,7 +36,7 @@
 				return [categoryName, { icon, actions }];
 			})
 			.filter(([_, { actions }]) => actions.length > 0);
-	}
+	});
 
 	function handleListKeydown(event: KeyboardEvent) {
 		if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
@@ -80,7 +80,7 @@
 	}
 </script>
 
-<div class="flex flex-col w-[18rem] h-full bg-neutral-900 border-l border-neutral-700">
+<div class="flex flex-col w-[18rem] h-full bg-neutral-900 border-r border-neutral-700">
 	<div class="flex flex-row items-center m-2 bg-neutral-700 border border-neutral-600 rounded-lg">
 		<MagnifyingGlass size="13" class="ml-2 mr-1 text-neutral-300" />
 		<input
@@ -111,26 +111,26 @@
 					aria-label={name}
 					aria-describedby="action-list-hint"
 					tabindex="-1"
-					on:keydown={handleListKeydown}
-					on:focusin={handleListFocusin}
+					onkeydown={handleListKeydown}
+					onfocusin={handleListFocusin}
 				>
 					{#each actions as action, i}
 						<div
 							class="flex flex-row items-center p-2 pl-6 bg-neutral-950 hover:bg-neutral-900 transition-colors border-t border-neutral-800 cursor-grab active:cursor-grabbing"
 							draggable="true"
-							title={$localisations?.[action.plugin]?.[action.uuid]?.Tooltip ?? action.tooltip}
+							title={appState.localisations?.[action.plugin]?.[action.uuid]?.Tooltip ?? action.tooltip}
 							role="option"
 							aria-selected="false"
 							tabindex={i == 0 ? 0 : -1}
-							aria-label={$localisations?.[action.plugin]?.[action.uuid]?.Name ?? action.name}
-							on:dragstart={(event) => {
+							aria-label={appState.localisations?.[action.plugin]?.[action.uuid]?.Name ?? action.name}
+							ondragstart={(event) => {
 								if (!event.dataTransfer) return;
 								event.dataTransfer.effectAllowed = "copy";
 								event.dataTransfer.setData("action", JSON.stringify(action));
 							}}
-							on:keydown={(event) => {
+							onkeydown={(event) => {
 								if ((event.ctrlKey || event.metaKey) && event.key == "c") {
-									copiedItem.set({ type: "action", action });
+									appState.copiedItem = { type: "action", action };
 								}
 							}}
 						>
@@ -139,7 +139,7 @@
 								alt=""
 								class="m-0.5 mr-3 w-11 h-11 rounded-lg border border-neutral-700 pointer-events-none"
 							/>
-							<span class="text-neutral-400">{$localisations?.[action.plugin]?.[action.uuid]?.Name ?? action.name}</span>
+							<span class="text-neutral-400">{appState.localisations?.[action.plugin]?.[action.uuid]?.Name ?? action.name}</span>
 						</div>
 					{/each}
 				</div>

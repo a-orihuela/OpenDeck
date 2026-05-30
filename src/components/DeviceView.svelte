@@ -4,65 +4,68 @@
 
 	import Key from "./Key.svelte";
 
-	import { inspectedInstance, inspectedParentAction } from "$lib/propertyInspector";
-	import { inFolderMode } from "$lib/singletons";
+	import { appState } from "$lib/propertyInspector";
+	
 	import { renderImage } from "$lib/rendererHelper";
 
 	import { addPage, exitFolder, getActivePage, removeLastPage, setActivePage } from "$lib/api/commands";
 	import { onFolderClosed, onFolderOpened, onPageChanged } from "$lib/api/events";
 	import { computeGridRowLengths, dropMoveInstance, dropNewAction, flatIndexFromRowCol, pasteItem, rowColFromFlatIndex } from "$lib/services/deviceService";
 	import { notify } from "$lib/notifications";
-	import { onDestroy } from "svelte";
 
-	export let device: DeviceInfo;
-	export let profile: Profile;
+	let { device = $bindable(), profile = $bindable(), selectedDevice = $bindable("") }: {
+		device: DeviceInfo;
+		profile: Profile;
+		selectedDevice: string;
+	} = $props();
 
-	export let selectedDevice: string;
+	let activePage = $state(0);
 
-	let activePage = 0;
-
-	// Keep activePage in sync when device changes or when the hardware navigates.
-	$: if (device) getActivePage(device.id).then(p => activePage = p);
-
-	const unlisten = onPageChanged((dev, page) => {
-		if (dev === device.id) activePage = page;
-	});
-	onDestroy(() => unlisten.then(fn => fn()));
-
-	// Folder mode state.
-	let activeFolderContext: string | null = null;
-
-	const unlistenFolderOpened = onFolderOpened((dev, folderContext) => {
-		if (dev === device.id) activeFolderContext = folderContext;
-	});
-	const unlistenFolderClosed = onFolderClosed((dev) => {
-		if (dev === device.id) activeFolderContext = null;
-	});
-	onDestroy(() => {
-		unlistenFolderOpened.then(fn => fn());
-		unlistenFolderClosed.then(fn => fn());
+	$effect(() => {
+		if (device) getActivePage(device.id).then(p => { activePage = p; });
 	});
 
-	// Sync inFolderMode store for ActionList filtering.
-	$: if (selectedDevice === device.id) inFolderMode.set(activeFolderContext !== null);
+	$effect(() => {
+		const unlistenPage = onPageChanged((dev, page) => {
+			if (dev === device.id) activePage = page;
+		});
+		const unlistenOpened = onFolderOpened((dev, folderContext) => {
+			if (dev === device.id) activeFolderContext = folderContext;
+		});
+		const unlistenClosed = onFolderClosed((dev) => {
+			if (dev === device.id) activeFolderContext = null;
+		});
+		return () => {
+			unlistenPage.then(fn => fn());
+			unlistenOpened.then(fn => fn());
+			unlistenClosed.then(fn => fn());
+		};
+	});
 
-	$: gridRowLengths = computeGridRowLengths(device);
-	$: pageSize = device.rows * device.columns;
-	$: pageStart = activePage * pageSize;
-	$: touchpointStart = (profile.num_pages ?? 1) * pageSize;
+	let activeFolderContext: string | null = $state(null);
 
-	// Folder-derived state.
-	$: folderFlatPos = activeFolderContext ? parseInt(activeFolderContext.split('.')[3]) : -1;
-	$: folderInstance = activeFolderContext ? (profile.keys[folderFlatPos] ?? null) : null;
-	$: folderSlots = (folderInstance?.folder_slots ?? []) as (ActionInstance | null)[];
-	$: folderClosePosition = activeFolderContext ? (folderFlatPos % pageSize) : -1;
+	$effect(() => {
+		if (selectedDevice === device.id) appState.inFolderMode = activeFolderContext !== null;
+	});
 
-	// Close button canvas: renders the red X and sends it to the physical device.
-	let closeCanvas: HTMLCanvasElement | null = null;
+	const gridRowLengths = $derived(computeGridRowLengths(device));
+	const pageSize = $derived(device.rows * device.columns);
+	const pageStart = $derived(activePage * pageSize);
+	const touchpointStart = $derived((profile.num_pages ?? 1) * pageSize);
 
-	$: if (closeCanvas && activeFolderContext) {
-		renderCloseIcon(closeCanvas);
-	}
+	const folderFlatPos = $derived(activeFolderContext ? parseInt((activeFolderContext as string).split('.')[3]) : -1);
+	const folderSlots = $derived((activeFolderContext ? (profile.keys[folderFlatPos]?.folder_slots ?? []) : []) as (ActionInstance | null)[]);
+	const folderClosePosition = $derived(activeFolderContext ? (folderFlatPos % pageSize) : -1);
+
+	let closeCanvas: HTMLCanvasElement | null = $state(null);
+
+	$effect(() => {
+		if (closeCanvas && activeFolderContext) {
+			renderCloseIcon(closeCanvas);
+		}
+	});
+
+	const keySize = $derived(device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144);
 
 	async function renderCloseIcon(canvas: HTMLCanvasElement) {
 		if (!activeFolderContext || folderClosePosition < 0) return;
@@ -105,7 +108,7 @@
 				const result = await dropNewAction(context, dataTransfer.getData("action"), array[position]);
 				if (result) {
 					array[position] = result;
-					activeFolderContext ? (folderSlots = [...folderSlots]) : (profile = profile);
+					profile = { ...profile };
 				}
 			} else if (dataTransfer?.getData("controller") && !activeFolderContext) {
 				const oldController = dataTransfer.getData("controller");
@@ -115,7 +118,7 @@
 				if (instance) {
 					array[position] = instance;
 					oldArray[oldPosition] = null;
-					profile = profile;
+					profile = { ...profile };
 				}
 			}
 		} catch (error: any) {
@@ -129,11 +132,7 @@
 			const result = await pasteItem(item, destination, array[destination.position], activeFolderContext);
 			if (result) {
 				array[destination.position] = result;
-				if (item.type === "action") {
-					activeFolderContext ? (folderSlots = [...folderSlots]) : (profile = profile);
-				} else {
-					profile = profile;
-				}
+				profile = { ...profile };
 			}
 		} catch (error: any) {
 			notify(String(error));
@@ -172,15 +171,14 @@
 		}
 	}
 
-	$: overflowsX = Math.max(device.columns, device.encoders, device.touchpoints) > 8;
-	$: overflowsY = (device.rows + Math.min(device.encoders, 1) + Math.min(device.touchpoints, 1)) > 4;
+	const overflowsX = $derived(Math.max(device.columns, device.encoders, device.touchpoints) > 8);
+	const overflowsY = $derived((device.rows + Math.min(device.encoders, 1) + Math.min(device.touchpoints, 1)) > 4);
 
-	// Grid navigation: track focused cell and compute row lengths for arrow key movement.
-	let focusedRow = 0;
-	let focusedCol = 0;
+	let focusedRow = $state(0);
+	let focusedCol = $state(0);
 
-	$: encoderRowIndex = device.rows;
-	$: touchpointRowIndex = device.rows + (device.encoders > 0 ? 1 : 0);
+	const encoderRowIndex = $derived(device.rows);
+	const touchpointRowIndex = $derived(device.rows + (device.encoders > 0 ? 1 : 0));
 
 	function handleGridKeydown(event: KeyboardEvent) {
 		const target = event.target as HTMLElement;
@@ -240,7 +238,7 @@
 	<div
 		class="flex flex-col justify-center grow px-16 py-6 overflow-auto"
 		class:items-center={device.columns <= 8}
-		class:hidden={$inspectedParentAction || selectedDevice != device.id}
+		class:hidden={appState.inspectedParentAction || selectedDevice != device.id}
 		class:device-fade-x={overflowsX && !overflowsY}
 		class:device-fade-y={overflowsY && !overflowsX}
 		class:device-fade-xy={overflowsX && overflowsY}
@@ -248,29 +246,28 @@
 		aria-label={device.name}
 		aria-describedby="grid-description"
 		tabindex="-1"
-		on:click={() => inspectedInstance.set(null)}
-		on:keyup={() => inspectedInstance.set(null)}
-		on:keydown|capture={handleGridKeydown}
-		on:focusin={handleGridFocusin}
+		onclick={() => { appState.inspectedInstance = null; }}
+		onkeyup={() => { appState.inspectedInstance = null; }}
+		onkeydown={handleGridKeydown}
+		onfocusin={handleGridFocusin}
 	>
 		{#if activeFolderContext}
-			<!-- Folder grid: physical positions 0..pageSize-1, no page offset. -->
+			<!-- Folder grid -->
 			<div class="flex flex-col" role="rowgroup">
 				{#each { length: device.rows } as _, r}
 					<div class="flex flex-row" role="row">
 						{#each { length: device.columns } as _, c}
 							{@const pos = r * device.columns + c}
 							{#if pos === folderClosePosition}
-								{@const closeSize = device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
-								<!-- Close button: shows red X, clicking exits folder. -->
+								{@const closeSize = keySize}
 								<div
 									class="relative cursor-pointer"
 									style={`transform: scale(${112 / closeSize});`}
 									role="gridcell"
 									aria-label="Close folder"
 									tabindex={focusedRow === r && focusedCol === c ? 0 : -1}
-									on:click|stopPropagation={handleExitFolder}
-									on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExitFolder(); }}
+									onclick={(e) => { e.stopPropagation(); handleExitFolder(); }}
+									onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExitFolder(); }}
 								>
 									<canvas
 										bind:this={closeCanvas}
@@ -278,17 +275,17 @@
 										style={`margin: ${-((closeSize + 6 - 132) / 2)}px;`}
 										width={closeSize}
 										height={closeSize}
-									/>
+									></canvas>
 								</div>
 							{:else}
 								<Key
 									context={{ device: device.id, profile: profile.id, controller: "Keypad", position: pos }}
 									bind:inslot={folderSlots[pos]}
-									on:dragover={handleDragOver}
-									on:drop={(event) => handleDrop(event, "Keypad", pos)}
-									on:dragstart={(event) => handleDragStart(event, "Keypad", pos)}
+									ondragover={handleDragOver}
+									ondrop={(event) => handleDrop(event, "Keypad", pos)}
+									ondragstart={(event) => handleDragStart(event, "Keypad", pos)}
 									{handlePaste}
-									size={device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
+									size={keySize}
 									label="Folder Key {String.fromCharCode(65 + r)}{c + 1}"
 									tabindex={focusedRow === r && focusedCol === c ? 0 : -1}
 								/>
@@ -298,7 +295,7 @@
 				{/each}
 			</div>
 		{:else}
-			<!-- Regular page grid. -->
+			<!-- Regular page grid -->
 			<div class="flex flex-col" role="rowgroup">
 				{#each { length: device.rows } as _, r}
 					<div class="flex flex-row" role="row">
@@ -307,11 +304,11 @@
 							<Key
 								context={{ device: device.id, profile: profile.id, controller: "Keypad", position: pos }}
 								bind:inslot={profile.keys[pos]}
-								on:dragover={handleDragOver}
-								on:drop={(event) => handleDrop(event, "Keypad", pos)}
-								on:dragstart={(event) => handleDragStart(event, "Keypad", pos)}
+								ondragover={handleDragOver}
+								ondrop={(event) => handleDrop(event, "Keypad", pos)}
+								ondragstart={(event) => handleDragStart(event, "Keypad", pos)}
 								{handlePaste}
-								size={device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
+								size={keySize}
 								label="Key {String.fromCharCode(65 + r)}{c + 1}"
 								tabindex={focusedRow === r && focusedCol === c ? 0 : -1}
 							/>
@@ -321,7 +318,7 @@
 			</div>
 		{/if}
 
-		<!-- Page navigation: always in DOM so layout stays stable; hidden while inside a folder. -->
+		<!-- Page navigation -->
 		<div
 			class="flex flex-row items-center justify-center gap-2 py-2"
 			class:invisible={!!activeFolderContext}
@@ -331,21 +328,21 @@
 				<button
 					class="w-2.5 h-2.5 rounded-full transition-colors {i === activePage ? 'bg-white' : 'bg-white/30'}"
 					aria-label="Page {i + 1}"
-					on:click={() => handleSetActivePage(i)}
-				/>
+					onclick={() => handleSetActivePage(i)}
+				></button>
 			{/each}
 			<button
 				class="ml-2 w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
 				aria-label="Add page"
 				title="Add page"
-				on:click={handleAddPage}
+				onclick={handleAddPage}
 			>+</button>
 			{#if (profile.num_pages ?? 1) > 1}
 				<button
 					class="w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
 					aria-label="Remove last page"
 					title="Remove last page"
-					on:click={handleRemoveLastPage}
+					onclick={handleRemoveLastPage}
 				>−</button>
 			{/if}
 		</div>
@@ -355,11 +352,11 @@
 				<Key
 					context={{ device: device.id, profile: profile.id, controller: "Encoder", position: i }}
 					bind:inslot={profile.sliders[i]}
-					on:dragover={handleDragOver}
-					on:drop={(event) => handleDrop(event, "Encoder", i)}
-					on:dragstart={(event) => handleDragStart(event, "Encoder", i)}
+					ondragover={handleDragOver}
+					ondrop={(event) => handleDrop(event, "Encoder", i)}
+					ondragstart={(event) => handleDragStart(event, "Encoder", i)}
 					{handlePaste}
-					size={device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
+					size={keySize}
 					label="Encoder {i + 1}"
 					tabindex={focusedRow === encoderRowIndex && focusedCol === i ? 0 : -1}
 				/>
@@ -373,11 +370,11 @@
 					<Key
 						context={{ device: device.id, profile: profile.id, controller: "Keypad", position: pos }}
 						bind:inslot={profile.keys[pos]}
-						on:dragover={handleDragOver}
-						on:drop={(event) => handleDrop(event, "Keypad", pos)}
-						on:dragstart={(event) => handleDragStart(event, "Keypad", pos)}
+						ondragover={handleDragOver}
+						ondrop={(event) => handleDrop(event, "Keypad", pos)}
+						ondragstart={(event) => handleDragStart(event, "Keypad", pos)}
 						{handlePaste}
-						size={device.id.startsWith("sd-") && device.rows == 4 && device.columns == 8 ? 192 : 144}
+						size={keySize}
 						isTouchPoint
 						label="Touch point {i + 1}"
 						tabindex={focusedRow === touchpointRowIndex && focusedCol === i ? 0 : -1}

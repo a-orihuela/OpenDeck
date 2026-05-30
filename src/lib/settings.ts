@@ -1,2 +1,2 @@
 export type { Settings } from "./bindings.ts";
-export { settings, localisations } from "./state/appState.ts";
+export { appState } from "./state/appState.svelte.ts";

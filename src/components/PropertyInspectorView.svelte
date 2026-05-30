@@ -3,18 +3,17 @@
 
 	import { WS_PI_SUFFIX } from "$lib/constants";
 	import { getWebserverUrl, getWebSocketPort } from "$lib/ports";
-	import { inspectedInstance } from "$lib/propertyInspector";
+	import { appState } from "$lib/propertyInspector";
 
 	import { makeInfo, openUrl, switchPropertyInspector } from "$lib/api/commands";
 	import { onPluginReloaded } from "$lib/api/events";
 
-	let iframes: { [context: string]: HTMLIFrameElement } = {};
-	let iframeContainer: HTMLDivElement;
-	let iframeClosePopup: HTMLButtonElement;
-	let iframePopupsOpen: string[] = [];
+	let { device, profile }: { device: DeviceInfo; profile: Profile } = $props();
 
-	export let device: DeviceInfo;
-	export let profile: Profile;
+	let iframes: { [context: string]: HTMLIFrameElement } = $state({});
+	let iframeContainer: HTMLDivElement | undefined = $state(undefined);
+	let iframeClosePopup: HTMLButtonElement | undefined = $state(undefined);
+	let iframePopupsOpen: string[] = $state([]);
 
 	async function iframeOnLoad(instance: ActionInstance) {
 		const iframe = iframes[instance.context];
@@ -62,20 +61,19 @@
 			iframe.style.top = "";
 			iframe.style.width = "100%";
 			iframe.style.height = "100%";
-			iframe.style.display = $inspectedInstance == context ? "block" : "none";
+			iframe.style.display = appState.inspectedInstance == context ? "block" : "none";
 			iframe.contentWindow?.postMessage({ event: "windowClosed" }, getWebserverUrl());
 		}
 
 		iframePopupsOpen = iframePopupsOpen.filter((e) => e != context);
 
-		if (iframePopupsOpen.length == 0) {
+		if (iframePopupsOpen.length == 0 && iframeContainer && iframeClosePopup) {
 			iframeContainer.style.position = "";
 			iframeContainer.style.width = "";
 			iframeContainer.style.height = "";
 			iframeContainer.style.padding = "";
 			iframeContainer.style.zIndex = "0";
 			iframeContainer.style.maxHeight = "";
-
 			iframeClosePopup.style.display = "none";
 		}
 	};
@@ -90,16 +88,17 @@
 			iframe.style.height = "calc(100% - 72px)";
 			iframe.style.display = "block";
 
-			iframePopupsOpen.push(data.payload);
+			iframePopupsOpen = [...iframePopupsOpen, data.payload];
 
-			iframeContainer.style.position = "absolute";
-			iframeContainer.style.width = "100%";
-			iframeContainer.style.height = "100%";
-			iframeContainer.style.padding = "36px";
-			iframeContainer.style.zIndex = "20";
-			iframeContainer.style.maxHeight = "100vh";
-
-			iframeClosePopup.style.display = "block";
+			if (iframeContainer && iframeClosePopup) {
+				iframeContainer.style.position = "absolute";
+				iframeContainer.style.width = "100%";
+				iframeContainer.style.height = "100%";
+				iframeContainer.style.padding = "36px";
+				iframeContainer.style.zIndex = "20";
+				iframeContainer.style.maxHeight = "100vh";
+				iframeClosePopup.style.display = "block";
+			}
 		} else if (data.event == "windowClosed") {
 			closePopup(data.payload);
 		} else if (data.event == "openUrl") {
@@ -109,12 +108,10 @@
 				const totalLength = arrays.reduce((acc, curr) => acc + curr.length, 0);
 				let mergedArray = new Uint8Array(totalLength);
 				let offset = 0;
-
 				arrays.forEach((item) => {
 					mergedArray.set(item, offset);
 					offset += item.length;
 				});
-
 				return mergedArray;
 			}
 
@@ -151,16 +148,17 @@
 	});
 
 	const nonNull = <T>(o: T | null): o is T => o != null;
-	$: instances = profile
-		.keys.filter(nonNull)
-		.reduce((prev, current) => prev.concat(current.children ? [current, ...current.children] : current), [] as ActionInstance[])
-		.concat(profile.sliders.filter(nonNull));
+	const instances = $derived(
+		profile.keys.filter(nonNull)
+			.reduce((prev, current) => prev.concat(current.children ? [current, ...current.children] : current), [] as ActionInstance[])
+			.concat(profile.sliders.filter(nonNull))
+	);
 
 	onPluginReloaded((pluginId) => {
 		for (const instance of instances) {
 			if (instance.action.plugin == pluginId && iframes[instance.context]) {
 				iframes[instance.context].src += "";
-				if ($inspectedInstance == instance.context) {
+				if (appState.inspectedInstance == instance.context) {
 					switchPropertyInspector(null, instance.context);
 				}
 			}
@@ -169,7 +167,7 @@
 </script>
 
 <svelte:window
-	on:keydown={(event) => {
+	onkeydown={(event) => {
 		if (event.key == "Escape" && iframePopupsOpen.length > 0) {
 			closePopup(iframePopupsOpen[iframePopupsOpen.length - 1]);
 		}
@@ -179,7 +177,7 @@
 <div class="grow min-h-64 max-h-96 overflow-auto bg-neutral-800 border-t border-neutral-700" bind:this={iframeContainer}>
 	<button
 		bind:this={iframeClosePopup}
-		on:click={() => closePopup(iframePopupsOpen[iframePopupsOpen.length - 1])}
+		onclick={() => closePopup(iframePopupsOpen[iframePopupsOpen.length - 1])}
 		class="absolute top-2 right-2 text-2xl text-neutral-300 font-bold hidden"
 	>
 		✕
@@ -189,12 +187,12 @@
 			<iframe
 				title="Property inspector"
 				class="w-full h-full hidden"
-				class:block!={$inspectedInstance == instance.context}
+				class:block!={appState.inspectedInstance == instance.context}
 				src={getWebserverUrl(instance.action.property_inspector + WS_PI_SUFFIX)}
 				name={instance.context}
 				bind:this={iframes[instance.context]}
-				on:load={() => iframeOnLoad(instance)}
-			/>
+				onload={() => iframeOnLoad(instance)}
+			></iframe>
 		{/if}
 	{/each}
 </div>

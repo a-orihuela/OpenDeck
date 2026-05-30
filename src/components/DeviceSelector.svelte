@@ -2,29 +2,40 @@
 	import type { DeviceInfo, Profile } from "$lib/bindings";
 
 	import { profileManager } from "$lib/singletons";
+	import { get } from "svelte/store";
+	import { untrack } from "svelte";
 
 	import { getBuildInfo, getDevices, getSelectedProfile, setSelectedProfile } from "$lib/api/commands";
 	import { onDevices, onSwitchProfile } from "$lib/api/events";
 	import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 
-	export let devices: { [id: string]: DeviceInfo } = {};
-	export let value: string;
-	export let selectedProfiles: { [id: string]: Profile } = {};
+	let { devices = $bindable({}), value = $bindable(""), selectedProfiles = $bindable({}) }: {
+		devices?: { [id: string]: DeviceInfo };
+		value?: string;
+		selectedProfiles?: { [id: string]: Profile };
+	} = $props();
 
-	let registered: string[] = [];
-	$: {
-		if (!value || !devices[value]) value = Object.keys(devices).sort()[0];
+	let registered: string[] = $state([]);
+	let buildInfo = $state("");
+	let measure: HTMLSpanElement | undefined = $state(undefined);
+	let selectWidth = $state(0);
+
+	$effect(() => {
+		const keys = Object.keys(devices).sort();
+		if ((!value || !devices[value]) && keys.length > 0) value = keys[0];
 		for (const [id, device] of Object.entries(devices)) {
-			if (!registered.includes(id)) {
+			const isRegistered = untrack(() => registered.includes(id));
+			if (!isRegistered) {
+				untrack(() => { registered = [...registered, id]; });
 				(async () => {
-					let profile: Profile = await getSelectedProfile(device.id);
-					selectedProfiles[id] = profile;
+					const profile: Profile = await getSelectedProfile(device.id);
+					// Reassign entire object so parent $state tracks the change
+					selectedProfiles = { ...untrack(() => selectedProfiles), [id]: profile };
 					await setSelectedProfile(id, profile.id);
 				})();
-				registered.push(id);
 			}
 		}
-	}
+	});
 
 	export function reloadProfiles() {
 		registered = [];
@@ -32,21 +43,21 @@
 
 	onSwitchProfile(async (device, profile) => {
 		if (device == value) {
-			$profileManager?.setProfile(profile);
+			get(profileManager)?.setProfile(profile);
 		} else {
 			await setSelectedProfile(device, profile);
-			selectedProfiles[device] = await getSelectedProfile(device);
+			const reloaded = await getSelectedProfile(device);
+		selectedProfiles = { ...selectedProfiles, [device]: reloaded };
 		}
 	});
 
-	(async () => devices = await getDevices())();
-	onDevices((payload) => devices = payload);
+	(async () => { devices = await getDevices(); })();
+	onDevices((payload) => { devices = payload; });
 
-	let buildInfo: string;
-	(async () => buildInfo = await getBuildInfo())();
-	const window = getCurrentWindow();
+	(async () => { buildInfo = await getBuildInfo(); })();
+	const tauriWindow = getCurrentWindow();
 
-	$: {
+	$effect(() => {
 		if (devices[value]) {
 			const effectiveCols = Math.min(Math.max(devices[value].columns, devices[value].encoders, devices[value].touchpoints), 8);
 			const effectiveRows = Math.min(devices[value].rows + Math.min(devices[value].encoders, 1) + Math.min(devices[value].touchpoints, 1), 4);
@@ -55,18 +66,18 @@
 			(async () => {
 				const width = Math.min(idealWidth, screen.availWidth);
 				const height = Math.min(idealHeight, screen.availHeight);
-				await window.setMinSize(new LogicalSize(width, height));
-				await window.setSize(new LogicalSize(width, height));
+				await tauriWindow.setMinSize(new LogicalSize(width, height));
+				await tauriWindow.setSize(new LogicalSize(width, height));
 			})();
 		}
-	}
+	});
 
-	let measure: HTMLSpanElement;
-	let selectWidth = 0;
-	$: if (value && measure && devices[value]) {
-		measure.textContent = devices[value].name;
-		selectWidth = measure.offsetWidth + 20;
-	}
+	$effect(() => {
+		if (value && measure && devices[value]) {
+			measure.textContent = devices[value].name;
+			selectWidth = measure.offsetWidth + 20;
+		}
+	});
 </script>
 
 {#if Object.keys(devices).length > 0}

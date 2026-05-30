@@ -1,2 +1,2 @@
-export type { Notification, NotificationLevel } from "./state/appState.ts";
-export { notifications, notify, dismissNotification as dismiss } from "./state/appState.ts";
+export type { Notification, NotificationLevel } from "./state/appState.svelte.ts";
+export { appState, notify, dismissNotification as dismiss } from "./state/appState.svelte.ts";
