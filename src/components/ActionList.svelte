@@ -39,7 +39,7 @@
 	});
 
 	function handleListKeydown(event: KeyboardEvent) {
-		if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+		if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
 		const list = event.currentTarget as HTMLElement;
 		const items = Array.from(list.querySelectorAll("[role='option']"));
 		const currentIndex = items.indexOf(event.target as Element);
@@ -50,9 +50,11 @@
 		let newIndex = currentIndex;
 		switch (event.key) {
 			case "ArrowDown":
+			case "ArrowRight":
 				newIndex = Math.min(currentIndex + 1, items.length - 1);
 				break;
 			case "ArrowUp":
+			case "ArrowLeft":
 				newIndex = Math.max(currentIndex - 1, 0);
 				break;
 			case "Home":
@@ -107,6 +109,7 @@
 					<span class="ml-1">{name}</span>
 				</summary>
 				<div
+					class="grid grid-cols-3 gap-1.5 px-3 py-2"
 					role="listbox"
 					aria-label={name}
 					aria-describedby="action-list-hint"
@@ -116,7 +119,7 @@
 				>
 					{#each actions as action, i}
 						<div
-							class="flex flex-row items-center p-2 pl-6 bg-neutral-950 hover:bg-neutral-900 transition-colors border-t border-neutral-800 cursor-grab active:cursor-grabbing"
+							class="group relative flex items-center justify-center aspect-square p-1.5 bg-neutral-950 hover:bg-neutral-900 transition-colors rounded-lg border border-neutral-800 cursor-grab active:cursor-grabbing"
 							draggable="true"
 							title={appState.localisations?.[action.plugin]?.[action.uuid]?.Tooltip ?? action.tooltip}
 							role="option"
@@ -137,9 +140,13 @@
 							<img
 								src={!action.icon.startsWith("omegadeck/") ? getWebserverUrl(action.icon) : action.icon.replace("omegadeck", "")}
 								alt=""
-								class="m-0.5 mr-3 w-11 h-11 rounded-lg border border-neutral-700 pointer-events-none"
+								class="w-full h-full object-contain rounded-md pointer-events-none"
 							/>
-							<span class="text-neutral-400">{appState.localisations?.[action.plugin]?.[action.uuid]?.Name ?? action.name}</span>
+							<div class="absolute inset-x-0 bottom-0 rounded-b-lg bg-neutral-900/95 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+								<span class="block text-xs text-center text-neutral-200 truncate leading-tight">
+									{appState.localisations?.[action.plugin]?.[action.uuid]?.Name ?? action.name}
+								</span>
+							</div>
 						</div>
 					{/each}
 				</div>

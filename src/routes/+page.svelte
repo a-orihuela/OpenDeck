@@ -83,7 +83,7 @@
 
 				<!-- Property inspector panel -->
 				{#if selectedProfiles[selectedDevice]}
-					<div class="border-t border-neutral-700 overflow-auto" style="flex: 0 0 auto; max-height: 40%">
+					<div class="border-t border-neutral-700" style="flex: 0 0 16rem; max-height: 40%">
 						<PropertyInspectorView device={devices[selectedDevice]} profile={selectedProfiles[selectedDevice]} />
 					</div>
 				{/if}

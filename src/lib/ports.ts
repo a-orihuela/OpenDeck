@@ -15,5 +15,6 @@ export function getWebSocketPort(): number {
 }
 
 export function getWebserverUrl(path: string = ""): string {
-	return `http://localhost:${portBase + 2}/${path}`;
+	const normalized = path.startsWith("/") ? path.slice(1) : path;
+	return `http://localhost:${portBase + 2}/${normalized}`;
 }

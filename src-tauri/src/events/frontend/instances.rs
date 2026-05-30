@@ -7,6 +7,20 @@ use crate::store::profiles::{LocksMut, acquire_locks, acquire_locks_mut, get_ins
 use tauri::{AppHandle, Emitter, Manager, command};
 use tokio::fs::remove_dir_all;
 
+fn normalise_action_states(action: &Action) -> Vec<ActionState> {
+	action
+		.states
+		.iter()
+		.cloned()
+		.map(|mut state| {
+			if state.image == "actionDefaultImage" {
+				state.image = action.icon.clone();
+			}
+			state
+		})
+		.collect()
+}
+
 #[command]
 pub async fn create_instance(app: AppHandle, action: Action, context: Context) -> Result<Option<ActionInstance>, Error> {
 	// In folder mode: route keypad drops to the open folder's child slots.
@@ -38,7 +52,7 @@ pub async fn create_instance(app: AppHandle, action: Action, context: Context) -
 		let instance = ActionInstance {
 			action: action.clone(),
 			context: ActionContext::from_context(context.clone(), index),
-			states: action.states.clone(),
+			states: normalise_action_states(&action),
 			current_state: 0,
 			settings: serde_json::Value::Object(serde_json::Map::new()),
 			children: None,
@@ -74,7 +88,7 @@ pub async fn create_instance(app: AppHandle, action: Action, context: Context) -
 		let instance = ActionInstance {
 			action: action.clone(),
 			context: ActionContext::from_context(context.clone(), 0),
-			states: action.states.clone(),
+			states: normalise_action_states(&action),
 			current_state: 0,
 			settings: serde_json::Value::Object(serde_json::Map::new()),
 			children: if matches!(action.uuid.as_str(), ACTION_MULTIACTION | ACTION_TOGGLEACTION) {
@@ -129,7 +143,11 @@ pub async fn move_instance(source: Context, destination: Context, retain: bool) 
 			instance.context = ActionContext::from_context(destination.clone(), index as u16 + 1);
 			for (i, state) in instance.states.iter_mut().enumerate() {
 				if !instance.action.states[i].image.is_empty() {
-					state.image = instance.action.states[i].image.clone();
+					if instance.action.states[i].image == "actionDefaultImage" {
+						state.image = instance.action.icon.clone();
+					} else {
+						state.image = instance.action.states[i].image.clone();
+					}
 				} else {
 					state.image = instance.action.icon.clone();
 				}
@@ -252,6 +270,17 @@ pub async fn set_state(context: ActionContext, index: u16, state: ActionState) -
 	let clone = reference.clone();
 	save_profile(&context.device, &mut locks).await?;
 	crate::events::outbound::states::title_parameters_did_change(&clone, index).await?;
+	Ok(())
+}
+
+#[command]
+pub async fn set_instance_settings(context: ActionContext, settings: serde_json::Value) -> Result<(), Error> {
+	let mut locks = acquire_locks_mut().await;
+	let reference = get_instance_mut(&context, &mut locks).await?.unwrap();
+	reference.settings = settings;
+	let clone = reference.clone();
+	save_profile(&context.device, &mut locks).await?;
+	crate::events::outbound::settings::did_receive_settings(&clone, true).await?;
 	Ok(())
 }
 

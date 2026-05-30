@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { ActionInstance, DeviceInfo, Profile } from "$lib/bindings";
+	import BuiltinActionInspector from "./BuiltinActionInspector.svelte";
 
-	import { WS_PI_SUFFIX } from "$lib/constants";
+	import { BUILTIN_PLUGIN, WS_PI_SUFFIX } from "$lib/constants";
 	import { getWebserverUrl, getWebSocketPort } from "$lib/ports";
 	import { appState } from "$lib/propertyInspector";
 
@@ -154,6 +155,18 @@
 			.concat(profile.sliders.filter(nonNull))
 	);
 
+	const selectedInstance = $derived(
+		typeof appState.inspectedInstance == "string"
+			? instances.find((instance) => instance.context == appState.inspectedInstance) ?? null
+			: null,
+	);
+
+	const showBuiltinInspector = $derived(
+		selectedInstance != null
+			&& selectedInstance.action.plugin == BUILTIN_PLUGIN
+			&& !selectedInstance.action.property_inspector,
+	);
+
 	onPluginReloaded((pluginId) => {
 		for (const instance of instances) {
 			if (instance.action.plugin == pluginId && iframes[instance.context]) {
@@ -174,7 +187,7 @@
 	}}
 />
 
-<div class="grow min-h-64 max-h-96 overflow-auto bg-neutral-800 border-t border-neutral-700" bind:this={iframeContainer}>
+<div class="h-full overflow-auto bg-neutral-800 border-t border-neutral-700" bind:this={iframeContainer}>
 	<button
 		bind:this={iframeClosePopup}
 		onclick={() => closePopup(iframePopupsOpen[iframePopupsOpen.length - 1])}
@@ -195,4 +208,8 @@
 			></iframe>
 		{/if}
 	{/each}
+
+	{#if selectedInstance && showBuiltinInspector}
+		<BuiltinActionInspector instance={selectedInstance} />
+	{/if}
 </div>

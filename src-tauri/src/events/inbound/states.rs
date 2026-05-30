@@ -5,6 +5,11 @@ use crate::store::profiles::{acquire_locks_mut, debounce_profile_save, get_insta
 
 use serde::Deserialize;
 
+fn default_state_image(instance: &crate::shared::ActionInstance, index: usize) -> String {
+	let image = instance.action.states[index].image.clone();
+	if image == "actionDefaultImage" { instance.action.icon.clone() } else { image }
+}
+
 #[derive(Deserialize)]
 pub struct SetTitlePayload {
 	title: Option<String>,
@@ -81,10 +86,14 @@ pub async fn set_image(mut event: ContextAndPayloadEvent<SetImagePayload>) -> Re
 			if state as usize >= instance.states.len() {
 				return Err(anyhow::anyhow!("State index out of bounds ({} > {})", state, instance.states.len() - 1));
 			}
-			instance.states[state as usize].image = event.payload.image.clone().unwrap_or(instance.action.states[state as usize].image.clone());
+			let default_image = default_state_image(instance, state as usize);
+			instance.states[state as usize].image = event.payload.image.clone().unwrap_or(default_image);
 		} else {
+			let default_images: Vec<String> = (0..instance.states.len())
+				.map(|index| default_state_image(instance, index))
+				.collect();
 			for (index, state) in instance.states.iter_mut().enumerate() {
-				state.image = event.payload.image.clone().unwrap_or(instance.action.states[index].image.clone());
+				state.image = event.payload.image.clone().unwrap_or(default_images[index].clone());
 			}
 		}
 		update_state(crate::APP_HANDLE.get().unwrap(), instance.context.clone(), &mut locks).await?;

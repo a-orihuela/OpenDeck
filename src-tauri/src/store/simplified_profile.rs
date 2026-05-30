@@ -149,9 +149,12 @@ impl DiskActionInstance {
 		let device = iter.nth(1).unwrap().to_string_lossy().into_owned();
 		let mut profile = iter.map(|x| x.to_string_lossy()).collect::<Vec<_>>().join("/");
 		profile = profile[..profile.len() - 5].to_owned();
+		let action_icon = self.action.icon.clone();
 
 		let reconstruct_path = |value: &str| -> String {
-			if !(value.is_empty() || value.starts_with("data:") || value.starts_with("omegadeck/")) {
+			if value == "actionDefaultImage" {
+				action_icon.clone()
+			} else if !(value.is_empty() || value.starts_with("data:") || value.starts_with("omegadeck/")) {
 				config_dir.join(PathBuf::from_slash(value)).to_string_lossy().into_owned()
 			} else {
 				value.to_owned()

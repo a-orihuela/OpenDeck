@@ -1,4 +1,4 @@
-import text from "../../product_name.txt?raw" with { type: "text" };
+import text from "../product_name.txt?raw" with { type: "text" };
 export const PRODUCT_NAME = text.trim();
 
 import { type Writable, writable } from "svelte/store";

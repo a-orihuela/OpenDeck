@@ -169,7 +169,7 @@
 	let lock = new CanvasLock();
 
 	$effect(() => {
-		const sl = structuredClone(slot);
+		const sl = $state.snapshot(slot);
 		const rotation = appState.settings?.rotation;
 		const st = currentState;
 		const sa = showAlert;
@@ -256,7 +256,7 @@
 	{/if}
 </div>
 
-{#if appState.openContextMenu && appState.openContextMenu?.context == context}
+{#if appState.openContextMenu && JSON.stringify(appState.openContextMenu.context) === JSON.stringify(context)}
 	<div
 		bind:this={contextMenuEl}
 		class="absolute w-32 font-semibold text-sm text-neutral-300 bg-neutral-700 border border-neutral-600 rounded-lg divide-y divide-neutral-600! z-10"

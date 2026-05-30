@@ -15,6 +15,28 @@ use serde::Serialize;
 
 static KEY_DOWN_TARGETS: LazyLock<DashMap<(String, u8), Context>> = LazyLock::new(DashMap::new);
 
+async fn should_show_brightness_limit_overlay(instance: &crate::shared::ActionInstance) -> bool {
+	let (step, delta) = match instance.action.uuid.as_str() {
+		"omegadeck.builtin.brightnessup" => {
+			let step = instance.settings.get("step").and_then(|v| v.as_u64()).unwrap_or(10) as i32;
+			(step, step)
+		}
+		"omegadeck.builtin.brightnessdown" => {
+			let step = instance.settings.get("step").and_then(|v| v.as_u64()).unwrap_or(10) as i32;
+			(step, -step)
+		}
+		_ => return false,
+	};
+
+	if step <= 0 {
+		return false;
+	}
+
+	let current = crate::store::SETTINGS_MUT.lock().await.value.brightness as i32;
+	let target = (current + delta).clamp(5, 100);
+	target == 5 || target == 100
+}
+
 #[derive(Serialize)]
 struct KeyEvent {
 	event: &'static str,
@@ -151,6 +173,20 @@ pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 		)
 		.await?;
 	} else if instance.action.uuid.starts_with("omegadeck.builtin.") {
+		if should_show_brightness_limit_overlay(instance).await {
+			let idx = instance.current_state as usize;
+			if idx < instance.states.len() {
+				let original_image = instance.states[idx].image.clone();
+				instance.states[idx].image = "omegadeck/folder-close.svg".to_owned();
+				let window = crate::APP_HANDLE.get().unwrap().get_webview_window("main").unwrap();
+				let _ = window.emit("update_state", serde_json::json!({
+					"context": instance.context.clone(),
+					"contents": instance.clone(),
+				}));
+				instance.states[idx].image = original_image;
+			}
+		}
+
 		let new_state = crate::builtin_actions::handle(instance, crate::builtin_actions::ActionEvent::KeyDown).await?;
 		if let Some(state) = new_state {
 			instance.current_state = state;

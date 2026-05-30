@@ -4,6 +4,7 @@
 
 use std::io::Read;
 use std::sync::LazyLock;
+use std::time::Duration;
 
 use enigo::{Direction, Enigo, Key, Keyboard, Settings as EnigoSettings, agent::Agent};
 use tauri::{Emitter, Manager};
@@ -89,11 +90,21 @@ pub async fn handle(instance: &ActionInstance, event: ActionEvent) -> anyhow::Re
 			_ => {}
 		},
 		"omegadeck.builtin.nexttrack" => match event {
-			ActionEvent::KeyDown | ActionEvent::DialDown => { let _ = press_key(Key::MediaNextTrack).await; }
+			ActionEvent::KeyDown | ActionEvent::DialDown => {
+				#[cfg(target_os = "linux")]
+				run_platform_command("playerctl next 2>/dev/null; true", "", "");
+				#[cfg(not(target_os = "linux"))]
+				{ let _ = press_key(Key::MediaNextTrack).await; }
+			}
 			_ => {}
 		},
 		"omegadeck.builtin.prevtrack" => match event {
-			ActionEvent::KeyDown | ActionEvent::DialDown => { let _ = press_key(Key::MediaPrevTrack).await; }
+			ActionEvent::KeyDown | ActionEvent::DialDown => {
+				#[cfg(target_os = "linux")]
+				run_platform_command("playerctl previous 2>/dev/null; true", "", "");
+				#[cfg(not(target_os = "linux"))]
+				{ let _ = press_key(Key::MediaPrevTrack).await; }
+			}
 			_ => {}
 		},
 		"omegadeck.builtin.mute" => match event {
@@ -151,36 +162,29 @@ pub async fn handle(instance: &ActionInstance, event: ActionEvent) -> anyhow::Re
 			}
 		},
 		"omegadeck.builtin.brightnessup" => {
-			let step = s.get("step").and_then(|v| v.as_u64()).unwrap_or(10) as u8;
+			let step = s.get("step").and_then(|v| v.as_u64()).unwrap_or(10) as i32;
 			match event {
 				ActionEvent::KeyUp | ActionEvent::DialUp => {
-					brightness_change(step as i32).await;
-				}
-				ActionEvent::DialRotate(ticks) if ticks > 0 => {
-					brightness_change(ticks as i32 * step as i32).await;
+					device_brightness_change(step).await;
 				}
 				ActionEvent::DialRotate(ticks) => {
-					brightness_change(ticks as i32 * step as i32).await;
+					device_brightness_change(ticks as i32 * step).await;
 				}
 				_ => {}
 			}
 		},
 		"omegadeck.builtin.brightnessdown" => {
-			let step = s.get("step").and_then(|v| v.as_u64()).unwrap_or(10) as u8;
+			let step = s.get("step").and_then(|v| v.as_u64()).unwrap_or(10) as i32;
 			match event {
 				ActionEvent::KeyUp | ActionEvent::DialUp => {
-					brightness_change(-(step as i32)).await;
-				}
-				ActionEvent::DialRotate(ticks) if ticks > 0 => {
-					brightness_change(ticks as i32 * step as i32).await;
+					device_brightness_change(-step).await;
 				}
 				ActionEvent::DialRotate(ticks) => {
-					brightness_change(ticks as i32 * step as i32).await;
+					device_brightness_change(ticks as i32 * step).await;
 				}
 				_ => {}
 			}
 		},
-
 		// ── Automation ───────────────────────────────────────────────────
 		"omegadeck.builtin.runcommand" => {
 			let cmd = match event {
@@ -192,9 +196,25 @@ pub async fn handle(instance: &ActionInstance, event: ActionEvent) -> anyhow::Re
 				}
 			};
 			if !cmd.trim().is_empty() {
+				let file_path = s.get("file").and_then(|v| v.as_str()).map(|v| v.to_owned());
+				let show = s.get("show").and_then(|v| v.as_bool()).unwrap_or(false);
+				let context = instance.context.clone();
 				tokio::spawn(async move {
-					if let Err(e) = run_command_str(&cmd).await {
-						log::warn!("run_command failed: {e}");
+					match run_command_str(&cmd).await {
+						Ok(output) => {
+							if let Some(path) = file_path
+								&& !path.trim().is_empty()
+								&& let Err(e) = tokio::fs::write(path, &output).await
+							{
+								log::warn!("run_command failed to write output file: {e}");
+							}
+							if show {
+								set_runtime_title(&context, output.trim().to_owned()).await;
+							}
+						}
+						Err(e) => {
+							log::warn!("run_command failed: {e}");
+						}
 					}
 				});
 			}
@@ -217,8 +237,14 @@ pub async fn handle(instance: &ActionInstance, event: ActionEvent) -> anyhow::Re
 				ActionEvent::DialRotate(ticks) if ticks < 0 => s.get("anticlockwise").and_then(|v| v.as_str()).unwrap_or("").to_owned(),
 				ActionEvent::DialRotate(_) => s.get("clockwise").and_then(|v| v.as_str()).unwrap_or("").to_owned(),
 			};
-			if let Err(e) = simulate_input(&dsl).await {
-				log::warn!("simulate_input failed: {e}");
+			let repeats = match event {
+				ActionEvent::DialRotate(ticks) => ticks.abs() as usize,
+				_ => 1,
+			};
+			for _ in 0..repeats {
+				if let Err(e) = simulate_input(&dsl).await {
+					log::warn!("simulate_input failed: {e}");
+				}
 			}
 		},
 
@@ -249,13 +275,48 @@ pub async fn handle(instance: &ActionInstance, event: ActionEvent) -> anyhow::Re
 	Ok(None)
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+async fn device_brightness_change(delta: i32) {
+	let current = crate::store::get_settings().value.brightness as i32;
+	let new_brightness = (current + delta).clamp(5, 100) as u8;
 
-async fn brightness_change(delta: i32) {
-	let _ = crate::events::outbound::devices::change_brightness(delta).await;
+	{
+		let mut store = crate::store::SETTINGS_MUT.lock().await;
+		store.value.brightness = new_brightness;
+		let _ = store.save();
+	}
+
+	let _ = crate::events::outbound::devices::set_brightness(new_brightness).await;
 }
 
-async fn run_command_str(cmd: &str) -> Result<(), anyhow::Error> {
+async fn set_runtime_title(context: &crate::shared::ActionContext, title: String) {
+	let Ok(mut locks) = tokio::time::timeout(
+		Duration::from_millis(200),
+		crate::store::profiles::acquire_locks_mut(),
+	)
+	.await
+	else { return };
+
+	let Ok(Some(instance)) = crate::store::profiles::get_instance_mut(context, &mut locks).await
+	else { return };
+
+	let idx = instance.current_state as usize;
+	if idx >= instance.states.len() {
+		return;
+	}
+
+	instance.states[idx].text = title;
+	instance.states[idx].show = true;
+	let clone = instance.clone();
+	let _ = crate::events::frontend::instances::update_state(
+		crate::APP_HANDLE.get().unwrap(),
+		clone.context.clone(),
+		&mut locks,
+	)
+	.await;
+	let _ = crate::events::outbound::states::title_parameters_did_change(&clone, idx as u16).await;
+}
+
+async fn run_command_str(cmd: &str) -> Result<String, anyhow::Error> {
 	#[cfg(unix)]
 	let (program, args): (&str, Vec<&str>) = {
 		let flatpak = std::env::var("FLATPAK_ID").is_ok()
@@ -285,5 +346,5 @@ async fn run_command_str(cmd: &str) -> Result<(), anyhow::Error> {
 	let mut output = String::new();
 	reader.read_to_string(&mut output)?;
 	log::debug!("run_command output: {}", output.trim());
-	Ok(())
+	Ok(output)
 }

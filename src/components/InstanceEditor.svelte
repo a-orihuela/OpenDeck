@@ -5,9 +5,10 @@
 
 	import { getFonts, setState } from "$lib/api/commands";
 
-	let { instance = $bindable(), showEditor = $bindable() }: {
+	let { instance = $bindable(), showEditor = $bindable(), inline = false }: {
 		instance: ActionInstance;
 		showEditor: boolean;
+		inline?: boolean;
 	} = $props();
 
 	let stateIndex = $state(0);
@@ -59,7 +60,7 @@
 	}}
 />
 
-<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-2 text-neutral-300 bg-neutral-700 border border-neutral-600 rounded-lg z-10">
+<div class={`p-2 text-neutral-300 bg-neutral-700 border border-neutral-600 rounded-lg ${inline ? "" : "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10"}`}>
 	<div class="flex flex-row">
 		<div class="select-wrapper m-1 w-full">
 			<select class="w-full bg-neutral-600! border-neutral-500!" bind:value={stateIndex} aria-label="State">
@@ -84,7 +85,10 @@
 				ondrop={handleDrop}
 				oncontextmenu={(event) => {
 					event.preventDefault();
-					instance.states[stateIndex].image = instance.action.states[stateIndex]?.image ?? instance.action.icon;
+					const defaultImage = instance.action.states[stateIndex]?.image;
+					instance.states[stateIndex].image = defaultImage == "actionDefaultImage"
+						? instance.action.icon
+						: (defaultImage ?? instance.action.icon);
 				}}
 				title="Click to select an image, or right-click to reset to the default image."
 				aria-label="Click to select an image, or right-click to reset to the default image."

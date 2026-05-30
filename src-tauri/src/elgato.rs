@@ -46,8 +46,11 @@ pub async fn update_image(context: &crate::shared::Context, image: Option<&str>)
 					)
 					.await?;
 			} else if is_touch_point {
-				let (r, g, b) = extract_average_colour(&image::load_from_memory(&bytes)?);
-				device.set_touchpoint_color(context.position - key_count, r, g, b).await?;
+				let tp_index = context.position - key_count;
+				if tp_index < kind.touchpoint_count() {
+					let (r, g, b) = extract_average_colour(&image::load_from_memory(&bytes)?);
+					device.set_touchpoint_color(tp_index, r, g, b).await?;
+				}
 			} else {
 				device.set_button_image(context.position, image::load_from_memory(&bytes)?).await?;
 			}
@@ -56,7 +59,10 @@ pub async fn update_image(context: &crate::shared::Context, image: Option<&str>)
 				.write_lcd(context.position as u16 * 200, 0, &ImageRect::from_image_async(image::DynamicImage::new_rgb8(200, 100))?)
 				.await?;
 		} else if is_touch_point {
-			device.set_touchpoint_color(context.position - key_count, 0, 0, 0).await?;
+			let tp_index = context.position - key_count;
+			if tp_index < kind.touchpoint_count() {
+				device.set_touchpoint_color(tp_index, 0, 0, 0).await?;
+			}
 		} else {
 			device.clear_button_image(context.position).await?;
 		}
@@ -118,13 +124,16 @@ async fn init(device: AsyncStreamDeck, device_id: String) {
 	clear_all_touchpoints(&device).await;
 	let _ = device.set_brightness(crate::store::get_settings().value.brightness).await;
 	let _ = device.flush().await;
+	let product_name = device.product().await.unwrap();
+	let reader = device.get_reader();
+	ELGATO_DEVICES.write().await.insert(device_id.clone(), device);
 	crate::events::inbound::devices::register_device(
 		"",
 		crate::events::inbound::PayloadEvent {
 			payload: crate::shared::DeviceInfo {
 				id: device_id.clone(),
 				plugin: String::new(),
-				name: device.product().await.unwrap(),
+				name: product_name,
 				rows: kind.row_count(),
 				columns: kind.column_count(),
 				encoders: kind.encoder_count(),
@@ -135,9 +144,6 @@ async fn init(device: AsyncStreamDeck, device_id: String) {
 	)
 	.await
 	.unwrap();
-
-	let reader = device.get_reader();
-	ELGATO_DEVICES.write().await.insert(device_id.clone(), device);
 	let press = |position| inbound::PayloadEvent {
 		payload: inbound::devices::PressPayload { device: device_id.clone(), position },
 	};
@@ -188,21 +194,18 @@ pub async fn initialise_devices() {
 		crate::plugins::DEVICE_NAMESPACES.write().await.remove("sd");
 	}
 
-	// Iterate through detected Elgato devices and attempt to register them.
-	let current = HIDAPI.read().await.as_ref().cloned();
-	let hid = match current {
-		Some(arc) => arc,
-		None => match elgato_streamdeck::new_hidapi() {
-			Ok(hid) => {
-				let arc = Arc::new(hid);
-				HIDAPI.write().await.replace(arc.clone());
-				arc
-			}
-			Err(error) => {
-				log::warn!("Failed to initialise hidapi: {error}");
-				return;
-			}
-		},
+	// Recreate the hidapi handle on each scan so USB disconnect/reconnect cycles
+	// always use a fresh device enumeration instead of a stale cached snapshot.
+	let hid = match elgato_streamdeck::new_hidapi() {
+		Ok(hid) => {
+			let arc = Arc::new(hid);
+			HIDAPI.write().await.replace(arc.clone());
+			arc
+		}
+		Err(error) => {
+			log::warn!("Failed to initialise hidapi: {error}");
+			return;
+		}
 	};
 	for (kind, serial) in elgato_streamdeck::asynchronous::list_devices_async(&hid) {
 		let device_id = format!("sd-{serial}");

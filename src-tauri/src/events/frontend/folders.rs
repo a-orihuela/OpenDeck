@@ -7,6 +7,20 @@ use crate::store::profiles::{acquire_locks_mut, get_slot_mut, save_profile};
 
 use tauri::{AppHandle, Emitter, Manager, command};
 
+fn normalise_action_states(action: &Action) -> Vec<crate::shared::ActionState> {
+	action
+		.states
+		.iter()
+		.cloned()
+		.map(|mut state| {
+			if state.image == "actionDefaultImage" {
+				state.image = action.icon.clone();
+			}
+			state
+		})
+		.collect()
+}
+
 #[derive(Clone, serde::Serialize)]
 struct FolderOpenedEvent {
 	device: String,
@@ -138,7 +152,7 @@ pub async fn create_folder_child_impl(
 	let instance = ActionInstance {
 		action: action.clone(),
 		context: child_context,
-		states: action.states.clone(),
+		states: normalise_action_states(&action),
 		current_state: 0,
 		settings: serde_json::Value::Object(serde_json::Map::new()),
 		children: None,

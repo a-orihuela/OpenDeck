@@ -10,24 +10,12 @@
 	import { PRODUCT_NAME } from "$lib/singletons";
 
 	import { backupConfigDirectory, getBuildInfo, openConfigDirectory, openLogDirectory, restoreConfigDirectory } from "$lib/api/commands";
-	import { onDeviceBrightness } from "$lib/api/events";
 	import { message } from "@tauri-apps/plugin-dialog";
 	import { notify } from "$lib/notifications";
 
 	let showPopup = $state(false);
 	let buildInfo = $state("");
 	(async () => { buildInfo = await getBuildInfo(); })();
-
-	onDeviceBrightness((action, amount) => {
-		if (!appState.settings) return;
-		let brightness = appState.settings.brightness;
-		switch (action) {
-			case "increase": brightness += amount; break;
-			case "decrease": brightness -= amount; break;
-			default:         brightness  = amount; break;
-		}
-		appState.settings.brightness = Math.max(0, Math.min(100, brightness));
-	});
 
 	async function backupConfig() {
 		await message(
@@ -81,15 +69,10 @@
 				<select bind:value={appState.settings!.language} class="w-32" id="settings-language">
 					<option value="en">English</option>
 					<option value="es">Español</option>
-					<option value="zh_CN">中文</option>
-					<option value="fr">Français</option>
-					<option value="de">Deutsch</option>
-					<option value="ja">日本語</option>
-					<option value="ko">韓国語</option>
 				</select>
 			</div>
 			{#snippet tooltipContent()}
-				{PRODUCT_NAME} itself is not yet translated. Changing this setting will translate the text from installed plugins into your language for those that support it.
+				This setting controls the language used by OmegaDeck's own interface where translations are available, and also the plugin text for plugins that provide that language.
 			{/snippet}
 			<Tooltip>{@render tooltipContent()}</Tooltip>
 		</div>
@@ -116,11 +99,6 @@
 
 		<!-- ── Device ───────────────────────────────────────────── -->
 		<h3 class="mx-2 mt-4 mb-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">Device</h3>
-
-		<div class="flex flex-row items-center m-2 space-x-2">
-			<label for="settings-brightness" class="text-neutral-400">Brightness:</label>
-			<input type="range" min="0" max="100" bind:value={appState.settings!.brightness} id="settings-brightness" />
-		</div>
 
 		<div class="flex flex-row items-center m-2 space-x-2">
 			<label for="settings-sleep_timeout_minutes" class="text-neutral-400">Sleep after inactivity:</label>

@@ -80,6 +80,9 @@ export const removeInstance = (context: string) =>
 export const setState = (context: string, index: number, state: ActionState) =>
 	invoke<void>("set_state", { context, index, state });
 
+export const setInstanceSettings = (context: string, settings: unknown) =>
+	invoke<void>("set_instance_settings", { context, settings });
+
 export const updateImage = (context: string, image: string | null) =>
 	invoke<void>("update_image", { context, image });
 
