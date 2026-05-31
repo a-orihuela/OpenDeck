@@ -34,7 +34,7 @@ async fn simulate_input(value: &str) -> Result<(), anyhow::Error> {
 	if value.trim().is_empty() {
 		return Ok(());
 	}
-	let value = value.to_owned();
+	let value = normalize_legacy_input_dsl(value);
 	let mut guard = ENIGO.lock().await;
 	std::thread::spawn(move || -> Result<(), anyhow::Error> {
 		if guard.is_none() {
@@ -49,6 +49,38 @@ async fn simulate_input(value: &str) -> Result<(), anyhow::Error> {
 	})
 	.join()
 	.unwrap_or(Ok(()))
+}
+
+fn normalize_legacy_input_dsl(value: &str) -> String {
+	let mut normalized = value.to_owned();
+
+	for (from, to) in [
+		("ControlLeft", "LControl"),
+		("ControlRight", "RControl"),
+		("ShiftLeft", "LShift"),
+		("ShiftRight", "RShift"),
+		("AltRight", "Alt"),
+		("MetaLeft", "Meta"),
+		("MetaRight", "Meta"),
+		("Enter", "Return"),
+		("PrintScreen", "PrintScr"),
+	] {
+		normalized = normalized.replace(from, to);
+	}
+
+	for letter in 'A'..='Z' {
+		let from = format!("Key{letter}");
+		let to = format!("Unicode('{}')", letter.to_ascii_lowercase());
+		normalized = normalized.replace(&from, &to);
+	}
+
+	for d in '0'..='9' {
+		let from = format!("Digit{d}");
+		let to = format!("Unicode('{d}')");
+		normalized = normalized.replace(&from, &to);
+	}
+
+	normalized
 }
 
 fn run_platform_command(linux: &str, macos: &str, windows: &str) {
@@ -198,12 +230,17 @@ pub async fn handle(instance: &ActionInstance, event: ActionEvent) -> anyhow::Re
 			if !cmd.trim().is_empty() {
 				let file_path = s.get("file").and_then(|v| v.as_str()).map(|v| v.to_owned());
 				let show = s.get("show").and_then(|v| v.as_bool()).unwrap_or(false);
-				let context = instance.context.clone();
-				tokio::spawn(async move {
-					match run_command_str(&cmd).await {
+				let output_path = file_path.filter(|path| !path.trim().is_empty());
+				if !show && output_path.is_none() {
+					if let Err(e) = run_command_detached(&cmd) {
+						log::warn!("run_command failed: {e}");
+					}
+				} else {
+					let context = instance.context.clone();
+					tokio::spawn(async move {
+						match run_command_str(&cmd).await {
 						Ok(output) => {
-							if let Some(path) = file_path
-								&& !path.trim().is_empty()
+							if let Some(path) = output_path
 								&& let Err(e) = tokio::fs::write(path, &output).await
 							{
 								log::warn!("run_command failed to write output file: {e}");
@@ -215,8 +252,9 @@ pub async fn handle(instance: &ActionInstance, event: ActionEvent) -> anyhow::Re
 						Err(e) => {
 							log::warn!("run_command failed: {e}");
 						}
-					}
-				});
+						}
+					});
+				}
 			}
 		},
 		"omegadeck.builtin.openurl" => {
@@ -317,6 +355,28 @@ async fn set_runtime_title(context: &crate::shared::ActionContext, title: String
 }
 
 async fn run_command_str(cmd: &str) -> Result<String, anyhow::Error> {
+	let (mut reader, writer) = os_pipe::pipe()?;
+	let writer2 = writer.try_clone()?;
+	let mut command = build_shell_command(cmd);
+	command.stdout(std::process::Stdio::from(writer));
+	command.stderr(std::process::Stdio::from(writer2));
+	command.spawn()?.wait()?;
+	let mut output = String::new();
+	reader.read_to_string(&mut output)?;
+	log::debug!("run_command output: {}", output.trim());
+	Ok(output)
+}
+
+fn run_command_detached(cmd: &str) -> Result<(), anyhow::Error> {
+	let mut command = build_shell_command(cmd);
+	command.stdout(std::process::Stdio::null());
+	command.stderr(std::process::Stdio::null());
+	command.stdin(std::process::Stdio::null());
+	command.spawn()?;
+	Ok(())
+}
+
+fn build_shell_command(cmd: &str) -> std::process::Command {
 	#[cfg(unix)]
 	let (program, args): (&str, Vec<&str>) = {
 		let flatpak = std::env::var("FLATPAK_ID").is_ok()
@@ -333,18 +393,10 @@ async fn run_command_str(cmd: &str) -> Result<String, anyhow::Error> {
 	#[cfg(windows)]
 	let (program, args): (&str, Vec<&str>) = ("cmd", vec!["/C", cmd]);
 
-	let (mut reader, writer) = os_pipe::pipe()?;
-	let writer2 = writer.try_clone()?;
 	let mut command = std::process::Command::new(program);
-	command.args(&args);
-	command.stdout(std::process::Stdio::from(writer));
-	command.stderr(std::process::Stdio::from(writer2));
+	command.args(args);
 	if let Some(home) = std::env::home_dir() {
 		command.current_dir(home);
 	}
-	command.spawn()?.wait()?;
-	let mut output = String::new();
-	reader.read_to_string(&mut output)?;
-	log::debug!("run_command output: {}", output.trim());
-	Ok(output)
+	command
 }

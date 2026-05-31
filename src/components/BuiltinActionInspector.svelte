@@ -18,27 +18,37 @@
 		'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight',
 	]);
 
-	const CODE_TO_ENIGO: Record<string, string> = (() => {
-		const m: Record<string, string> = {
-			'ControlLeft': 'ControlLeft', 'ControlRight': 'ControlRight',
-			'ShiftLeft': 'ShiftLeft', 'ShiftRight': 'ShiftRight',
-			'AltLeft': 'Alt', 'AltRight': 'AltGr',
-			'MetaLeft': 'Meta', 'MetaRight': 'Meta',
-			'Enter': 'Return', 'Escape': 'Escape', 'Backspace': 'Backspace',
-			'Tab': 'Tab', 'Space': 'Space', 'Delete': 'Delete', 'Insert': 'Insert',
-			'Home': 'Home', 'End': 'End', 'PageUp': 'PageUp', 'PageDown': 'PageDown',
-			'ArrowUp': 'UpArrow', 'ArrowDown': 'DownArrow', 'ArrowLeft': 'LeftArrow', 'ArrowRight': 'RightArrow',
-			'F1': 'F1', 'F2': 'F2', 'F3': 'F3', 'F4': 'F4', 'F5': 'F5', 'F6': 'F6',
-			'F7': 'F7', 'F8': 'F8', 'F9': 'F9', 'F10': 'F10', 'F11': 'F11', 'F12': 'F12',
-			'PrintScreen': 'PrintScr', 'CapsLock': 'CapsLock', 'NumLock': 'NumLock', 'ScrollLock': 'ScrollLock',
-			'Minus': 'Minus', 'Equal': 'Equal', 'BracketLeft': 'LeftBracket', 'BracketRight': 'RightBracket',
-			'Backslash': 'BackSlash', 'Semicolon': 'SemiColon', 'Quote': 'Quote', 'Backquote': 'Grave',
-			'Comma': 'Comma', 'Period': 'Dot', 'Slash': 'Slash',
-		};
-		for (const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') m[`Key${c}`] = `Key${c}`;
-		for (let i = 0; i <= 9; i++) m[`Digit${i}`] = `Num${i}`;
-		return m;
-	})();
+	const CODE_TO_ENIGO: Record<string, string> = {
+		'ControlLeft': 'LControl', 'ControlRight': 'RControl',
+		'ShiftLeft': 'LShift', 'ShiftRight': 'RShift',
+		'AltLeft': 'Alt', 'AltRight': 'Alt',
+		'MetaLeft': 'Meta', 'MetaRight': 'Meta',
+		'Enter': 'Return', 'Escape': 'Escape', 'Backspace': 'Backspace',
+		'Tab': 'Tab', 'Space': 'Space', 'Delete': 'Delete', 'Insert': 'Insert',
+		'Home': 'Home', 'End': 'End', 'PageUp': 'PageUp', 'PageDown': 'PageDown',
+		'ArrowUp': 'UpArrow', 'ArrowDown': 'DownArrow', 'ArrowLeft': 'LeftArrow', 'ArrowRight': 'RightArrow',
+		'F1': 'F1', 'F2': 'F2', 'F3': 'F3', 'F4': 'F4', 'F5': 'F5', 'F6': 'F6',
+		'F7': 'F7', 'F8': 'F8', 'F9': 'F9', 'F10': 'F10', 'F11': 'F11', 'F12': 'F12',
+		'PrintScreen': 'PrintScr', 'CapsLock': 'CapsLock', 'NumLock': 'Numlock', 'ScrollLock': 'ScrollLock',
+	};
+
+	function toEnigoKey(code: string, key: string): string | null {
+		const mapped = CODE_TO_ENIGO[code];
+		if (mapped) return mapped;
+
+		if (/^Key[A-Z]$/.test(code)) {
+			return `Unicode('${code.slice(3).toLowerCase()}')`;
+		}
+		if (/^Digit[0-9]$/.test(code)) {
+			return `Unicode('${code.slice(5)}')`;
+		}
+		if (key.length === 1) {
+			const escaped = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+			return `Unicode('${escaped}')`;
+		}
+
+		return null;
+	}
 
 	$effect(() => {
 		if (!capturingField) return;
@@ -49,12 +59,19 @@
 				heldModifiers.add(e.code);
 				return;
 			}
-			const mods = Array.from(heldModifiers);
-			const mainKey = CODE_TO_ENIGO[e.code] ?? e.code;
+			const mods = Array.from(heldModifiers)
+				.map((code) => toEnigoKey(code, ""))
+				.filter((key): key is string => key !== null);
+			const mainKey = toEnigoKey(e.code, e.key);
+			if (!mainKey) {
+				capturingField = null;
+				heldModifiers = new Set();
+				return;
+			}
 			const parts = [
-				...mods.map(m => `k(${CODE_TO_ENIGO[m]},Press)`),
+				...mods.map(m => `k(${m},Press)`),
 				`k(${mainKey},Click)`,
-				...mods.map(m => `k(${CODE_TO_ENIGO[m]},Release)`),
+				...mods.map(m => `k(${m},Release)`),
 			];
 			const dsl = `[${parts.join(',')}]`;
 			void updateSetting(capturingField!, dsl);
@@ -248,7 +265,7 @@
 	{:else if instance.action.uuid === "omegadeck.builtin.inputsimulation"}
 		<div class="space-y-2 max-w-3xl">
 			<h3 class="text-sm font-semibold text-neutral-100">Simulate Input</h3>
-			<p class="text-xs text-neutral-400">Enigo DSL format: <code class="bg-neutral-800 px-1 rounded">[k(ControlLeft,Press),k(KeyC,Click),k(ControlLeft,Release)]</code>. Press <strong>Capture</strong> to record a shortcut automatically.</p>
+			<p class="text-xs text-neutral-400">Enigo DSL format: <code class="bg-neutral-800 px-1 rounded">[k(LControl,Press),k(Unicode('c'),Click),k(LControl,Release)]</code>. Press <strong>Capture</strong> to record a shortcut automatically.</p>
 
 			{#if !isEncoder}
 				<div class="flex items-center justify-between">
