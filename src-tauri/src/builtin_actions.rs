@@ -51,6 +51,17 @@ async fn simulate_input(value: &str) -> Result<(), anyhow::Error> {
 	.unwrap_or(Ok(()))
 }
 
+#[cfg(target_os = "linux")]
+fn try_playerctl(action: &str) -> bool {
+	std::process::Command::new("playerctl")
+		.arg(action)
+		.stdout(std::process::Stdio::null())
+		.stderr(std::process::Stdio::null())
+		.status()
+		.map(|status| status.success())
+		.unwrap_or(false)
+}
+
 fn normalize_legacy_input_dsl(value: &str) -> String {
 	let mut normalized = value.to_owned();
 
@@ -124,7 +135,9 @@ pub async fn handle(instance: &ActionInstance, event: ActionEvent) -> anyhow::Re
 		"omegadeck.builtin.nexttrack" => match event {
 			ActionEvent::KeyDown | ActionEvent::DialDown => {
 				#[cfg(target_os = "linux")]
-				run_platform_command("playerctl next 2>/dev/null; true", "", "");
+				if !try_playerctl("next") {
+					let _ = press_key(Key::MediaNextTrack).await;
+				}
 				#[cfg(not(target_os = "linux"))]
 				{ let _ = press_key(Key::MediaNextTrack).await; }
 			}
@@ -133,7 +146,9 @@ pub async fn handle(instance: &ActionInstance, event: ActionEvent) -> anyhow::Re
 		"omegadeck.builtin.prevtrack" => match event {
 			ActionEvent::KeyDown | ActionEvent::DialDown => {
 				#[cfg(target_os = "linux")]
-				run_platform_command("playerctl previous 2>/dev/null; true", "", "");
+				if !try_playerctl("previous") {
+					let _ = press_key(Key::MediaPrevTrack).await;
+				}
 				#[cfg(not(target_os = "linux"))]
 				{ let _ = press_key(Key::MediaPrevTrack).await; }
 			}
