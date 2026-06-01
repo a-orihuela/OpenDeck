@@ -177,7 +177,7 @@ pub async fn key_down(device: &str, key: u8) -> Result<(), anyhow::Error> {
 			let idx = instance.current_state as usize;
 			if idx < instance.states.len() {
 				let original_image = instance.states[idx].image.clone();
-				instance.states[idx].image = "omegadeck/folder-close.svg".to_owned();
+				instance.states[idx].image = "omegadeck/builtin/folder-close.svg".to_owned();
 				let window = crate::APP_HANDLE.get().unwrap().get_webview_window("main").unwrap();
 				let _ = window.emit("update_state", serde_json::json!({
 					"context": instance.context.clone(),

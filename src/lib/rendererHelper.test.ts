@@ -11,16 +11,16 @@ vi.mock("./api/commands.ts", () => ({
 import { getImage } from "./rendererHelper.ts";
 
 describe("getImage", () => {
-	it("returns /alert.png when image is undefined", () => {
-		expect(getImage(undefined, undefined)).toBe("/alert.png");
+	it("returns /builtin/alert.svg when image is undefined", () => {
+		expect(getImage(undefined, undefined)).toBe("/builtin/alert.svg");
 	});
 
-	it("returns /alert.png when image is empty string", () => {
-		expect(getImage("", undefined)).toBe("/alert.png");
+	it("returns /builtin/alert.svg when image is empty string", () => {
+		expect(getImage("", undefined)).toBe("/builtin/alert.svg");
 	});
 
 	it("strips omegadeck/ prefix and returns path without prefix", () => {
-		expect(getImage("omegadeck/multi-action.png", undefined)).toBe("/multi-action.png");
+		expect(getImage("omegadeck/multi-action.svg", undefined)).toBe("/builtin/multi-action.svg");
 	});
 
 	it("routes non-data URLs through getWebserverUrl", () => {
@@ -34,12 +34,12 @@ describe("getImage", () => {
 
 	it("returns fallback for base64 image with empty data segment", () => {
 		const noData = "data:image/png;base64,";
-		expect(getImage(noData, undefined)).toBe("/alert.png");
+		expect(getImage(noData, undefined)).toBe("/builtin/alert.svg");
 	});
 
 	it("returns fallback result when primary image is undefined and fallback is provided", () => {
-		const fallback = "omegadeck/ok.png";
-		expect(getImage(undefined, fallback)).toBe("/ok.png");
+		const fallback = "omegadeck/ok.svg";
+		expect(getImage(undefined, fallback)).toBe("/builtin/ok.svg");
 	});
 
 	it("normalises a percent-encoded SVG XML data URL", () => {

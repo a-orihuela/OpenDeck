@@ -1,6 +1,14 @@
 use std::fs;
 
 fn main() {
+	// Keep Tauri resources (icons, desktop template, config overlays) in sync.
+	println!("cargo:rerun-if-changed=build.rs");
+	println!("cargo:rerun-if-changed=icons");
+	println!("cargo:rerun-if-changed=bundle");
+	println!("cargo:rerun-if-changed=tauri.conf.json");
+	println!("cargo:rerun-if-changed=tauri.linux.conf.json");
+	println!("cargo:rerun-if-changed=tauri.windows.conf.json");
+
 	#[cfg(not(debug_assertions))]
 	println!("cargo:rerun-if-changed=../plugins");
 	if let Err(error) = || -> Result<(), std::io::Error> {

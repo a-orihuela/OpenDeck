@@ -360,12 +360,12 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 				serde_json::from_value(serde_json::json!(
 					{
 						"name": "Multi Action",
-						"icon": "omegadeck/multi-action.png",
+						"icon": "omegadeck/builtin/multi-action.svg",
 						"plugin": crate::constants::BUILTIN_PLUGIN,
 						"uuid": crate::constants::ACTION_MULTIACTION,
 						"tooltip": "Execute multiple actions",
 						"controllers": [ "Keypad" ],
-						"states": [ { "image": "omegadeck/multi-action.png" } ],
+						"states": [ { "image": "omegadeck/builtin/multi-action.svg" } ],
 						"supported_in_multi_actions": false
 					}
 				))
@@ -373,12 +373,12 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 				serde_json::from_value(serde_json::json!(
 					{
 						"name": "Toggle Action",
-						"icon": "omegadeck/toggle-action.png",
+						"icon": "omegadeck/builtin/toggle-action.svg",
 						"plugin": crate::constants::BUILTIN_PLUGIN,
 						"uuid": crate::constants::ACTION_TOGGLEACTION,
 						"tooltip": "Cycle through multiple actions",
 						"controllers": [ "Keypad" ],
-						"states": [ { "image": "omegadeck/toggle-action.png" } ],
+						"states": [ { "image": "omegadeck/builtin/toggle-action.svg" } ],
 						"supported_in_multi_actions": false
 					}
 				))
@@ -394,12 +394,12 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 				serde_json::from_value(serde_json::json!(
 					{
 						"name": "Next Page",
-						"icon": "omegadeck/next-page.svg",
+						"icon": "omegadeck/builtin/next-page.svg",
 						"plugin": crate::constants::BUILTIN_PLUGIN,
 						"uuid": crate::constants::ACTION_NEXTPAGE,
 						"tooltip": "Go to the next page",
 						"controllers": [ "Keypad" ],
-						"states": [ { "image": "omegadeck/next-page.svg" } ],
+						"states": [ { "image": "omegadeck/builtin/next-page.svg" } ],
 						"supported_in_multi_actions": false
 					}
 				))
@@ -407,12 +407,12 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 				serde_json::from_value(serde_json::json!(
 					{
 						"name": "Previous Page",
-						"icon": "omegadeck/previous-page.svg",
+						"icon": "omegadeck/builtin/previous-page.svg",
 						"plugin": crate::constants::BUILTIN_PLUGIN,
 						"uuid": crate::constants::ACTION_PREVIOUSPAGE,
 						"tooltip": "Go to the previous page",
 						"controllers": [ "Keypad" ],
-						"states": [ { "image": "omegadeck/previous-page.svg" } ],
+						"states": [ { "image": "omegadeck/builtin/previous-page.svg" } ],
 						"supported_in_multi_actions": false
 					}
 				))
@@ -420,12 +420,12 @@ pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::n
 				serde_json::from_value(serde_json::json!(
 					{
 						"name": "Folder",
-						"icon": "omegadeck/folder.svg",
+						"icon": "omegadeck/builtin/folder.svg",
 						"plugin": crate::constants::BUILTIN_PLUGIN,
 						"uuid": crate::constants::ACTION_FOLDER,
 						"tooltip": "Open a folder of actions",
 						"controllers": [ "Keypad" ],
-						"states": [ { "image": "omegadeck/folder.svg" } ],
+						"states": [ { "image": "omegadeck/builtin/folder.svg" } ],
 						"supported_in_multi_actions": false
 					}
 				))

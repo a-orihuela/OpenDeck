@@ -5,9 +5,10 @@ import { getWebserverUrl } from "./ports.ts";
 import { updateImage } from "./api/commands.ts";
 
 export function getImage(image: string | undefined, fallback: string | undefined): string {
-	if (!image) return fallback ? getImage(fallback, undefined) : "/alert.png";
-	if (image === "actionDefaultImage") return fallback ? getImage(fallback, undefined) : "/alert.png";
-	if (image.startsWith("omegadeck/")) return image.replace("omegadeck", "");
+	if (!image) return fallback ? getImage(fallback, undefined) : "/builtin/alert.svg";
+	if (image === "actionDefaultImage") return fallback ? getImage(fallback, undefined) : "/builtin/alert.svg";
+	if (image.startsWith("omegadeck/builtin/")) return image.replace(/^omegadeck\/builtin\//, "/builtin/");
+	if (image.startsWith("omegadeck/")) return image.replace(/^omegadeck\//, "/builtin/");
 	if (!image.startsWith("data:")) return getWebserverUrl(image);
 	const svgxmlre = /^data:image\/svg\+xml(?!.*?;base64.*?)(?:;[\w=]*)*,(.+)/;
 	const base64re = /^data:image\/(apng|avif|gif|jpeg|png|svg\+xml|webp|bmp|x-icon|tiff);base64,([A-Za-z0-9+/]+={0,2})?/;
@@ -21,7 +22,7 @@ export function getImage(image: string | undefined, fallback: string | undefined
 	}
 	if (base64re.test(image)) {
 		const exec = base64re.exec(image)!;
-		if (!exec[2]) return fallback ? getImage(fallback, undefined) : "/alert.png";
+		if (!exec[2]) return fallback ? getImage(fallback, undefined) : "/builtin/alert.svg";
 		else image = exec[0];
 	}
 	return image;
@@ -143,7 +144,7 @@ export async function renderImage(
 	if (showOk) {
 		const okImage = document.createElement("img");
 		okImage.crossOrigin = "anonymous";
-		okImage.src = "/ok.png";
+		okImage.src = "/builtin/ok.svg";
 		await new Promise((resolve) => {
 			okImage.onload = resolve;
 		});
@@ -153,7 +154,7 @@ export async function renderImage(
 	if (showAlert) {
 		const alertImage = document.createElement("img");
 		alertImage.crossOrigin = "anonymous";
-		alertImage.src = "/alert.png";
+		alertImage.src = "/builtin/alert.svg";
 		await new Promise((resolve) => {
 			alertImage.onload = resolve;
 		});
