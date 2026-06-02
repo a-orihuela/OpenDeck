@@ -1,0 +1,40 @@
+{
+  "style": "duotone",
+  "source": "https://phosphoricons.com",
+  "icons": {
+    "multi-action.svg": { "phosphor": "SquaresFour", "weight": "duotone", "notes": "Represents grouped actions." },
+    "toggle-action.svg": { "phosphor": "Repeat", "weight": "duotone", "notes": "Represents cycle/toggle." },
+    "next-page.svg": { "phosphor": "ArrowCircleRight", "weight": "duotone", "notes": "Next page navigation." },
+    "previous-page.svg": { "phosphor": "ArrowCircleLeft", "weight": "duotone", "notes": "Previous page navigation." },
+    "folder.svg": { "phosphor": "FolderSimple", "weight": "duotone", "notes": "Folder action." },
+    "folder-close.svg": { "phosphor": "FolderSimpleLock", "weight": "duotone", "notes": "Close folder state in navigation." },
+    "run-command.svg": { "phosphor": "Terminal", "weight": "duotone", "notes": "Run command." },
+    "open-url.svg": { "phosphor": "GlobeSimple", "weight": "duotone", "notes": "Open URL in browser." },
+    "simulate-input.svg": { "phosphor": "Keyboard", "weight": "duotone", "notes": "Keyboard input simulation." },
+    "volume-up.svg": { "phosphor": "SpeakerHigh", "weight": "duotone", "notes": "Volume up." },
+    "volume-down.svg": { "phosphor": "SpeakerLow", "weight": "duotone", "notes": "Volume down." },
+    "volume-on.svg": { "phosphor": "SpeakerNone", "weight": "duotone", "notes": "Unmuted state.", "secondaryOpacity": 0.5 },
+    "mute.svg": { "phosphor": "SpeakerSlash", "weight": "duotone", "notes": "Muted state.", "secondaryOpacity": 0.5 },
+    "play.svg": { "phosphor": "Play", "weight": "duotone", "notes": "Play state." },
+    "pause.svg": { "phosphor": "Pause", "weight": "duotone", "notes": "Pause state." },
+    "next-track.svg": { "phosphor": "SkipForward", "weight": "duotone", "notes": "Next track." },
+    "prev-track.svg": { "phosphor": "SkipBack", "weight": "duotone", "notes": "Previous track." },
+    "lock-screen.svg": { "phosphor": "LockSimple", "weight": "duotone", "notes": "Lock screen action." },
+    "sleep.svg": { "phosphor": "MoonStars", "weight": "duotone", "notes": "Sleep/suspend action." },
+    "screenshot.svg": { "phosphor": "Camera", "weight": "duotone", "notes": "Screenshot action." },
+    "brightness-up.svg": { "phosphor": "SunDim", "weight": "duotone", "notes": "Brightness up." },
+    "brightness-down.svg": { "phosphor": "SunHorizon", "weight": "duotone", "notes": "Brightness down." },
+    "switch-profile.svg": { "phosphor": "ArrowsLeftRight", "weight": "duotone", "notes": "Switch profile action." },
+    "pomodoro.svg": { "phosphor": "Timer", "weight": "duotone", "notes": "Pomodoro timer." },
+    "alert.svg": { "phosphor": "WarningCircle", "weight": "duotone", "notes": "Fallback/alert icon in renderer.", "secondaryOpacity": 0.35 },
+    "ok.svg": { "phosphor": "CheckCircle", "weight": "duotone", "notes": "Success icon in renderer.", "secondaryOpacity": 0.35 },
+    "cube.svg": { "phosphor": "Cube", "weight": "duotone", "notes": "Parent action placeholder icon." }
+  },
+  "generation": {
+    "targetSize": 256,
+    "primaryOpacity": 1,
+    "secondaryOpacity": 0.45,
+    "fill": "#f5f5ef",
+    "preserveViewBox": "0 0 256 256"
+  }
+}

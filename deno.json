@@ -1,4 +1,8 @@
 {
+	"tasks": {
+		"icons:generate": "deno run -A scripts/generate_phosphor_svgs.ts",
+		"icons:generate:dry": "deno run -A scripts/generate_phosphor_svgs.ts --dry-run"
+	},
 	"exclude": ["src-tauri", "node_modules", "build", ".svelte-kit"],
 	"fmt": {
 		"exclude": ["**/*.md", "**/.*/**/*.md"],

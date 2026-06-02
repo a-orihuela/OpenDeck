@@ -167,10 +167,11 @@
 								}
 							}}
 						>
+							<div class="absolute inset-2 rounded-md bg-neutral-900/70 border border-neutral-700/60 pointer-events-none"></div>
 							<img
 								src={!action.icon.startsWith("omegadeck/") ? getWebserverUrl(action.icon) : action.icon.replace("omegadeck", "")}
 								alt=""
-								class="w-full h-full object-contain rounded-md pointer-events-none"
+								class="relative z-10 w-[88%] h-[88%] object-contain rounded-md pointer-events-none"
 							/>
 							<div class="absolute inset-x-0 bottom-0 rounded-b-lg bg-neutral-900/95 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
 								<span class="block text-xs text-center text-neutral-200 truncate leading-tight">
