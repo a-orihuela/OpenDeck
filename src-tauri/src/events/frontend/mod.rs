@@ -13,6 +13,14 @@ use std::collections::HashMap;
 use font_loader::system_fonts;
 use tauri::{Emitter, Manager, command};
 
+fn builtins_localisation(locale: &str) -> Result<serde_json::Value, Error> {
+	let raw = match locale {
+		"es" => include_str!("../../../locales/es.json"),
+		_ => include_str!("../../../locales/en.json"),
+	};
+	Ok(serde_json::from_str(raw)?)
+}
+
 #[derive(Debug, serde_with::SerializeDisplay, serde::Deserialize)]
 pub struct Error {
 	pub description: String,
@@ -98,6 +106,8 @@ pub async fn get_localisations(locale: &str) -> Result<HashMap<String, serde_jso
 			localisations.insert(path.file_name().unwrap().to_str().unwrap().to_owned(), locale);
 		}
 	}
+
+	localisations.insert(crate::constants::BUILTIN_PLUGIN.to_owned(), builtins_localisation(locale)?);
 
 	Ok(localisations)
 }

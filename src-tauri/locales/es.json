@@ -1,0 +1,23 @@
+{
+  "omegadeck.builtin.multiaction": { "Name": "Acción múltiple", "Tooltip": "Ejecuta varias acciones" },
+  "omegadeck.builtin.toggleaction": { "Name": "Acción de alternancia", "Tooltip": "Alterna entre varias acciones" },
+  "omegadeck.builtin.nextpage": { "Name": "Página siguiente", "Tooltip": "Ir a la página siguiente" },
+  "omegadeck.builtin.previouspage": { "Name": "Página anterior", "Tooltip": "Ir a la página anterior" },
+  "omegadeck.builtin.folder": { "Name": "Carpeta", "Tooltip": "Abrir una carpeta de acciones" },
+  "omegadeck.builtin.runcommand": { "Name": "Ejecutar comando", "Tooltip": "Ejecutar un comando de shell" },
+  "omegadeck.builtin.openurl": { "Name": "Abrir URL", "Tooltip": "Abrir una URL en el navegador predeterminado" },
+  "omegadeck.builtin.inputsimulation": { "Name": "Simular entrada", "Tooltip": "Simular atajos de teclado" },
+  "omegadeck.builtin.volumeup": { "Name": "Subir volumen", "Tooltip": "Aumentar el volumen del sistema" },
+  "omegadeck.builtin.volumedown": { "Name": "Bajar volumen", "Tooltip": "Reducir el volumen del sistema" },
+  "omegadeck.builtin.mute": { "Name": "Silencio", "Tooltip": "Alternar silencio del sistema" },
+  "omegadeck.builtin.playpause": { "Name": "Reproducir / Pausar", "Tooltip": "Reproducir o pausar multimedia" },
+  "omegadeck.builtin.nexttrack": { "Name": "Siguiente pista", "Tooltip": "Saltar a la siguiente pista" },
+  "omegadeck.builtin.prevtrack": { "Name": "Pista anterior", "Tooltip": "Ir a la pista anterior" },
+  "omegadeck.builtin.lockscreen": { "Name": "Bloquear pantalla", "Tooltip": "Bloquear la pantalla" },
+  "omegadeck.builtin.sleep": { "Name": "Suspender", "Tooltip": "Suspender el ordenador" },
+  "omegadeck.builtin.screenshot": { "Name": "Captura de pantalla", "Tooltip": "Tomar una captura de pantalla" },
+  "omegadeck.builtin.brightnessup": { "Name": "Subir brillo", "Tooltip": "Aumentar el brillo del Stream Deck" },
+  "omegadeck.builtin.brightnessdown": { "Name": "Bajar brillo", "Tooltip": "Reducir el brillo del Stream Deck" },
+  "omegadeck.builtin.switchprofile": { "Name": "Cambiar perfil", "Tooltip": "Cambiar a un perfil distinto" },
+  "omegadeck.builtin.pomodoro": { "Name": "Temporizador Pomodoro", "Tooltip": "Temporizador Pomodoro en la tecla" }
+}

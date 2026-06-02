@@ -1,0 +1,23 @@
+{
+  "omegadeck.builtin.multiaction": { "Name": "Multi Action", "Tooltip": "Execute multiple actions" },
+  "omegadeck.builtin.toggleaction": { "Name": "Toggle Action", "Tooltip": "Cycle through multiple actions" },
+  "omegadeck.builtin.nextpage": { "Name": "Next Page", "Tooltip": "Go to the next page" },
+  "omegadeck.builtin.previouspage": { "Name": "Previous Page", "Tooltip": "Go to the previous page" },
+  "omegadeck.builtin.folder": { "Name": "Folder", "Tooltip": "Open a folder of actions" },
+  "omegadeck.builtin.runcommand": { "Name": "Run Command", "Tooltip": "Run a shell command" },
+  "omegadeck.builtin.openurl": { "Name": "Open URL", "Tooltip": "Open a URL in the default browser" },
+  "omegadeck.builtin.inputsimulation": { "Name": "Simulate Input", "Tooltip": "Simulate keyboard shortcuts" },
+  "omegadeck.builtin.volumeup": { "Name": "Volume Up", "Tooltip": "Increase system volume" },
+  "omegadeck.builtin.volumedown": { "Name": "Volume Down", "Tooltip": "Decrease system volume" },
+  "omegadeck.builtin.mute": { "Name": "Mute", "Tooltip": "Toggle system mute" },
+  "omegadeck.builtin.playpause": { "Name": "Play / Pause", "Tooltip": "Play or pause media" },
+  "omegadeck.builtin.nexttrack": { "Name": "Next Track", "Tooltip": "Skip to next track" },
+  "omegadeck.builtin.prevtrack": { "Name": "Previous Track", "Tooltip": "Go to previous track" },
+  "omegadeck.builtin.lockscreen": { "Name": "Lock Screen", "Tooltip": "Lock the screen" },
+  "omegadeck.builtin.sleep": { "Name": "Sleep", "Tooltip": "Suspend the computer" },
+  "omegadeck.builtin.screenshot": { "Name": "Screenshot", "Tooltip": "Take a screenshot" },
+  "omegadeck.builtin.brightnessup": { "Name": "Brightness Up", "Tooltip": "Increase Stream Deck brightness" },
+  "omegadeck.builtin.brightnessdown": { "Name": "Brightness Down", "Tooltip": "Decrease Stream Deck brightness" },
+  "omegadeck.builtin.switchprofile": { "Name": "Switch Profile", "Tooltip": "Switch to a different profile" },
+  "omegadeck.builtin.pomodoro": { "Name": "Pomodoro Timer", "Tooltip": "Pomodoro timer on the key" }
+}

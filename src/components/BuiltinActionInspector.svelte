@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { ActionInstance } from "$lib/bindings";
 	import { getProfiles, setInstanceSettings } from "$lib/api/commands";
-	import { appState } from "$lib/settings";
+	import { _ } from "$lib/i18n";
 
 	let { instance }: { instance: ActionInstance } = $props();
 
@@ -123,13 +123,10 @@
 
 	const controller = $derived(instance.context.split(".")[2] ?? "Keypad");
 	const isEncoder = $derived(controller == "Encoder");
-	const isSpanish = $derived(appState.settings?.language === "es");
 	// Device comes from the action context (index 0), not from settings
 	const currentDeviceId = $derived(instance.context.split(".")[0] ?? "");
-
-	function t(english: string, spanish: string): string {
-		return isSpanish ? spanish : english;
-	}
+	const translate = $derived($_);
+	const t = (key: string, values?: Record<string, unknown>) => translate(key, { values });
 
 	$effect(() => {
 		if (!currentDeviceId) {
@@ -160,33 +157,30 @@
 		const sessions = readNumber(settings, "sessions_before_long_break", 4);
 		const parts: string[] = [];
 		for (let i = 0; i < sessions; i++) {
-			parts.push(`Work ${work}m`);
-			if (i < sessions - 1) parts.push(`Break ${brk}m`);
+			parts.push(t("builtinInspector.pomodoro.workLabel", { minutes: work }));
+			if (i < sessions - 1) parts.push(t("builtinInspector.pomodoro.breakLabel", { minutes: brk }));
 		}
-		parts.push(`Long break ${longBreak}m`);
-		return `${parts.join(" -> ")} -> repeat`;
+		parts.push(t("builtinInspector.pomodoro.longBreakLabel", { minutes: longBreak }));
+		return `${parts.join(" -> ")} -> ${t("builtinInspector.pomodoro.repeat")}`;
 	}
 </script>
 
 <div class="w-full h-full overflow-auto p-3 text-neutral-200">
 	{#if instance.action.uuid === "omegadeck.builtin.runcommand"}
 		<div class="space-y-2 max-w-3xl">
-			<h3 class="text-sm font-semibold text-neutral-100">{t("Run Command", "Ejecutar comando")}</h3>
-			<p class="text-xs text-neutral-400">{@html t(
-				'Write the shell command that OmegaDeck should execute for each gesture. Example: in <strong>On press</strong> you can put <code class="bg-neutral-800 px-1 rounded">notify-send &quot;OmegaDeck&quot; &quot;Action triggered&quot;</code>. If the action is on an encoder, the <strong>Dial rotate</strong> field runs on each turn, and <code class="bg-neutral-800 px-1 rounded">%d</code> is replaced with the number of ticks moved: <code class="bg-neutral-800 px-1 rounded">1</code>, <code class="bg-neutral-800 px-1 rounded">2</code>, <code class="bg-neutral-800 px-1 rounded">-1</code>...',
-				'Escribe el comando de shell que OmegaDeck debe ejecutar para cada gesto. Por ejemplo, en <strong>Al pulsar</strong> puedes poner <code class="bg-neutral-800 px-1 rounded">notify-send &quot;OmegaDeck&quot; &quot;Acción ejecutada&quot;</code>. Si la acción está en un encoder, el campo <strong>Al girar</strong> se ejecuta en cada giro, y <code class="bg-neutral-800 px-1 rounded">%d</code> se sustituye por el número de pasos detectados: <code class="bg-neutral-800 px-1 rounded">1</code>, <code class="bg-neutral-800 px-1 rounded">2</code>, <code class="bg-neutral-800 px-1 rounded">-1</code>...'
-			)}</p>
+			<h3 class="text-sm font-semibold text-neutral-100">{t("builtinInspector.runCommand.title")}</h3>
+			<p class="text-xs text-neutral-400">{@html t("builtinInspector.runCommand.description")}</p>
 
-			<label class="block text-xs text-neutral-400" for="builtin-run-down">{isEncoder ? t("Dial press", "Pulsación del dial") : t("On press", "Al pulsar")}</label>
+			<label class="block text-xs text-neutral-400" for="builtin-run-down">{isEncoder ? t("builtinInspector.runCommand.dialPress") : t("builtinInspector.runCommand.onPress")}</label>
 			<input
 				id="builtin-run-down"
 				class="w-full px-2 py-1 text-sm text-neutral-100 bg-neutral-700 border border-neutral-600 rounded"
 				value={readString(currentSettings, "down")}
-				placeholder={t('notify-send "OmegaDeck" "Action triggered!"', 'notify-send "OmegaDeck" "¡Acción ejecutada!"')}
+				placeholder={t("builtinInspector.runCommand.downPlaceholder")}
 				onchange={(e) => updateSetting("down", e.currentTarget.value)}
 			/>
 
-			<label class="block text-xs text-neutral-400" for="builtin-run-up">{isEncoder ? t("Dial release", "Soltar el dial") : t("On release", "Al soltar")}</label>
+			<label class="block text-xs text-neutral-400" for="builtin-run-up">{isEncoder ? t("builtinInspector.runCommand.dialRelease") : t("builtinInspector.runCommand.onRelease")}</label>
 			<input
 				id="builtin-run-up"
 				class="w-full px-2 py-1 text-sm text-neutral-100 bg-neutral-700 border border-neutral-600 rounded"
@@ -195,23 +189,23 @@
 			/>
 
 			{#if isEncoder}
-				<label class="block text-xs text-neutral-400" for="builtin-run-rotate">{t("Dial rotate", "Al girar")}</label>
+				<label class="block text-xs text-neutral-400" for="builtin-run-rotate">{t("builtinInspector.runCommand.dialRotate")}</label>
 				<input
 					id="builtin-run-rotate"
 					class="w-full px-2 py-1 text-sm text-neutral-100 bg-neutral-700 border border-neutral-600 rounded"
 					value={readString(currentSettings, "rotate")}
-					placeholder={t('Example: notify-send "OmegaDeck" "Rotated %d ticks"', 'Ejemplo: notify-send "OmegaDeck" "Girado %d pasos"')}
+					placeholder={t("builtinInspector.runCommand.rotatePlaceholder")}
 					onchange={(e) => updateSetting("rotate", e.currentTarget.value)}
 				/>
 			{/if}
 
 			<hr class="border-neutral-700 my-2" />
-			<label class="block text-xs text-neutral-400" for="builtin-run-file">{t("Save output to", "Guardar salida en")}</label>
+			<label class="block text-xs text-neutral-400" for="builtin-run-file">{t("builtinInspector.runCommand.saveOutputTo")}</label>
 			<input
 				id="builtin-run-file"
 				class="w-full px-2 py-1 text-sm text-neutral-100 bg-neutral-700 border border-neutral-600 rounded"
 				value={readString(currentSettings, "file")}
-				placeholder={t("Optional file path", "Ruta de archivo opcional")}
+				placeholder={t("builtinInspector.runCommand.optionalFilePath")}
 				onchange={(e) => updateSetting("file", e.currentTarget.value)}
 			/>
 			<label class="inline-flex items-center gap-2 text-xs text-neutral-300" for="builtin-run-show">
@@ -221,14 +215,14 @@
 					checked={readBool(currentSettings, "show", false)}
 					onchange={(e) => updateSetting("show", e.currentTarget.checked)}
 				/>
-				{t("Show output on key", "Mostrar salida en la tecla")}
+				{t("builtinInspector.runCommand.showOutputOnKey")}
 			</label>
 		</div>
 	{:else if instance.action.uuid === "omegadeck.builtin.openurl"}
 		<div class="space-y-2 max-w-3xl">
-			<h3 class="text-sm font-semibold text-neutral-100">Open URL</h3>
+			<h3 class="text-sm font-semibold text-neutral-100">{t("builtinInspector.openUrl.title")}</h3>
 
-			<label class="block text-xs text-neutral-400" for="builtin-url-down">{isEncoder ? "Dial press" : "On press"}</label>
+			<label class="block text-xs text-neutral-400" for="builtin-url-down">{isEncoder ? t("builtinInspector.switchProfile.dialPress") : t("builtinInspector.runCommand.onPress")}</label>
 			<input
 				id="builtin-url-down"
 				class="w-full px-2 py-1 text-sm text-neutral-100 bg-neutral-700 border border-neutral-600 rounded"
@@ -236,7 +230,7 @@
 				onchange={(e) => updateSetting("down", e.currentTarget.value)}
 			/>
 
-			<label class="block text-xs text-neutral-400" for="builtin-url-up">{isEncoder ? "Dial release" : "On release"}</label>
+			<label class="block text-xs text-neutral-400" for="builtin-url-up">{isEncoder ? t("builtinInspector.runCommand.dialRelease") : t("builtinInspector.runCommand.onRelease")}</label>
 			<input
 				id="builtin-url-up"
 				class="w-full px-2 py-1 text-sm text-neutral-100 bg-neutral-700 border border-neutral-600 rounded"
@@ -245,7 +239,7 @@
 			/>
 
 			{#if isEncoder}
-				<label class="block text-xs text-neutral-400" for="builtin-url-anticlockwise">Rotate left</label>
+				<label class="block text-xs text-neutral-400" for="builtin-url-anticlockwise">{t("builtinInspector.openUrl.rotateLeft")}</label>
 				<input
 					id="builtin-url-anticlockwise"
 					class="w-full px-2 py-1 text-sm text-neutral-100 bg-neutral-700 border border-neutral-600 rounded"
@@ -253,7 +247,7 @@
 					onchange={(e) => updateSetting("anticlockwise", e.currentTarget.value)}
 				/>
 
-				<label class="block text-xs text-neutral-400" for="builtin-url-clockwise">Rotate right</label>
+				<label class="block text-xs text-neutral-400" for="builtin-url-clockwise">{t("builtinInspector.openUrl.rotateRight")}</label>
 				<input
 					id="builtin-url-clockwise"
 					class="w-full px-2 py-1 text-sm text-neutral-100 bg-neutral-700 border border-neutral-600 rounded"
@@ -264,16 +258,16 @@
 		</div>
 	{:else if instance.action.uuid === "omegadeck.builtin.inputsimulation"}
 		<div class="space-y-2 max-w-3xl">
-			<h3 class="text-sm font-semibold text-neutral-100">Simulate Input</h3>
-			<p class="text-xs text-neutral-400">Enigo DSL format: <code class="bg-neutral-800 px-1 rounded">[k(LControl,Press),k(Unicode('c'),Click),k(LControl,Release)]</code>. Press <strong>Capture</strong> to record a shortcut automatically.</p>
+			<h3 class="text-sm font-semibold text-neutral-100">{t("builtinInspector.inputSimulation.title")}</h3>
+			<p class="text-xs text-neutral-400">{@html t("builtinInspector.inputSimulation.description")}</p>
 
 			{#if !isEncoder}
 				<div class="flex items-center justify-between">
-					<label class="block text-xs text-neutral-400" for="builtin-input-down">On press</label>
+					<label class="block text-xs text-neutral-400" for="builtin-input-down">{t("builtinInspector.inputSimulation.onPress")}</label>
 					<button
 						class="text-xs px-2 py-0.5 rounded {capturingField === 'down' ? 'bg-amber-600 text-white animate-pulse' : 'bg-neutral-600 hover:bg-neutral-500 text-neutral-200'}"
 						onclick={() => { if (capturingField === 'down') cancelCapture(); else capturingField = 'down'; }}
-					>{capturingField === 'down' ? '⌨ Listening…' : '⌨ Capture'}</button>
+					>{capturingField === 'down' ? t("builtinInspector.inputSimulation.listening") : t("builtinInspector.inputSimulation.capture")}</button>
 				</div>
 				<textarea
 					id="builtin-input-down"
@@ -283,11 +277,11 @@
 				>{readString(currentSettings, "down")}</textarea>
 
 				<div class="flex items-center justify-between">
-					<label class="block text-xs text-neutral-400" for="builtin-input-up">On release (optional)</label>
+					<label class="block text-xs text-neutral-400" for="builtin-input-up">{t("builtinInspector.inputSimulation.onReleaseOptional")}</label>
 					<button
 						class="text-xs px-2 py-0.5 rounded {capturingField === 'up' ? 'bg-amber-600 text-white animate-pulse' : 'bg-neutral-600 hover:bg-neutral-500 text-neutral-200'}"
 						onclick={() => { if (capturingField === 'up') cancelCapture(); else capturingField = 'up'; }}
-					>{capturingField === 'up' ? '⌨ Listening…' : '⌨ Capture'}</button>
+					>{capturingField === 'up' ? t("builtinInspector.inputSimulation.listening") : t("builtinInspector.inputSimulation.capture")}</button>
 				</div>
 				<textarea
 					id="builtin-input-up"
@@ -297,11 +291,11 @@
 				>{readString(currentSettings, "up")}</textarea>
 			{:else}
 				<div class="flex items-center justify-between">
-					<label class="block text-xs text-neutral-400" for="builtin-input-anticlockwise">Rotate left</label>
+					<label class="block text-xs text-neutral-400" for="builtin-input-anticlockwise">{t("builtinInspector.inputSimulation.rotateLeft")}</label>
 					<button
 						class="text-xs px-2 py-0.5 rounded {capturingField === 'anticlockwise' ? 'bg-amber-600 text-white animate-pulse' : 'bg-neutral-600 hover:bg-neutral-500 text-neutral-200'}"
 						onclick={() => { if (capturingField === 'anticlockwise') cancelCapture(); else capturingField = 'anticlockwise'; }}
-					>{capturingField === 'anticlockwise' ? '⌨ Listening…' : '⌨ Capture'}</button>
+					>{capturingField === 'anticlockwise' ? t("builtinInspector.inputSimulation.listening") : t("builtinInspector.inputSimulation.capture")}</button>
 				</div>
 				<textarea
 					id="builtin-input-anticlockwise"
@@ -311,11 +305,11 @@
 				>{readString(currentSettings, "anticlockwise")}</textarea>
 
 				<div class="flex items-center justify-between">
-					<label class="block text-xs text-neutral-400" for="builtin-input-clockwise">Rotate right</label>
+					<label class="block text-xs text-neutral-400" for="builtin-input-clockwise">{t("builtinInspector.inputSimulation.rotateRight")}</label>
 					<button
 						class="text-xs px-2 py-0.5 rounded {capturingField === 'clockwise' ? 'bg-amber-600 text-white animate-pulse' : 'bg-neutral-600 hover:bg-neutral-500 text-neutral-200'}"
 						onclick={() => { if (capturingField === 'clockwise') cancelCapture(); else capturingField = 'clockwise'; }}
-					>{capturingField === 'clockwise' ? '⌨ Listening…' : '⌨ Capture'}</button>
+					>{capturingField === 'clockwise' ? t("builtinInspector.inputSimulation.listening") : t("builtinInspector.inputSimulation.capture")}</button>
 				</div>
 				<textarea
 					id="builtin-input-clockwise"
@@ -327,20 +321,20 @@
 		</div>
 	{:else if instance.action.uuid === "omegadeck.builtin.screenshot"}
 		<div class="space-y-2 max-w-3xl">
-			<h3 class="text-sm font-semibold text-neutral-100">Screenshot</h3>
-			<label class="block text-xs text-neutral-400" for="builtin-screenshot-mode">Method</label>
+			<h3 class="text-sm font-semibold text-neutral-100">{t("builtinInspector.screenshot.title")}</h3>
+			<label class="block text-xs text-neutral-400" for="builtin-screenshot-mode">{t("builtinInspector.screenshot.method")}</label>
 			<select
 				id="builtin-screenshot-mode"
 				class="w-full px-2 py-1 text-sm text-neutral-100 bg-neutral-700 border border-neutral-600 rounded"
 				value={readString(currentSettings, "mode") || "system_shortcut"}
 				onchange={(e) => updateSetting("mode", e.currentTarget.value)}
 			>
-				<option value="system_shortcut">System shortcut</option>
-				<option value="command">Custom command</option>
+				<option value="system_shortcut">{t("builtinInspector.screenshot.systemShortcut")}</option>
+				<option value="command">{t("builtinInspector.screenshot.customCommand")}</option>
 			</select>
 
 			{#if (readString(currentSettings, "mode") || "system_shortcut") == "command"}
-				<label class="block text-xs text-neutral-400" for="builtin-screenshot-command">Command</label>
+				<label class="block text-xs text-neutral-400" for="builtin-screenshot-command">{t("builtinInspector.screenshot.command")}</label>
 				<input
 					id="builtin-screenshot-command"
 					class="w-full px-2 py-1 text-sm text-neutral-100 bg-neutral-700 border border-neutral-600 rounded"
@@ -351,10 +345,10 @@
 		</div>
 	{:else if instance.action.uuid === "omegadeck.builtin.switchprofile"}
 		<div class="space-y-2 max-w-3xl">
-			<h3 class="text-sm font-semibold text-neutral-100">Switch Profile</h3>
-			<p class="text-xs text-neutral-400">Switches the profile on the device that contains this button.</p>
+			<h3 class="text-sm font-semibold text-neutral-100">{t("builtinInspector.switchProfile.title")}</h3>
+			<p class="text-xs text-neutral-400">{t("builtinInspector.switchProfile.description")}</p>
 
-			<label class="block text-xs text-neutral-400" for="builtin-switch-profile">{isEncoder ? "Dial press" : "Profile"}</label>
+			<label class="block text-xs text-neutral-400" for="builtin-switch-profile">{isEncoder ? t("builtinInspector.switchProfile.dialPress") : t("builtinInspector.switchProfile.profile")}</label>
 			<input
 				id="builtin-switch-profile"
 				list="builtin-profiles"
@@ -369,7 +363,7 @@
 			</datalist>
 
 			{#if isEncoder}
-				<label class="block text-xs text-neutral-400" for="builtin-switch-anticlockwise">Rotate left</label>
+				<label class="block text-xs text-neutral-400" for="builtin-switch-anticlockwise">{t("builtinInspector.switchProfile.rotateLeft")}</label>
 				<input
 					id="builtin-switch-anticlockwise"
 					list="builtin-profiles"
@@ -378,7 +372,7 @@
 					onchange={(e) => updateSetting("anticlockwise", e.currentTarget.value)}
 				/>
 
-				<label class="block text-xs text-neutral-400" for="builtin-switch-clockwise">Rotate right</label>
+				<label class="block text-xs text-neutral-400" for="builtin-switch-clockwise">{t("builtinInspector.switchProfile.rotateRight")}</label>
 				<input
 					id="builtin-switch-clockwise"
 					list="builtin-profiles"
@@ -390,9 +384,9 @@
 		</div>
 	{:else if instance.action.uuid === "omegadeck.builtin.brightnessup" || instance.action.uuid === "omegadeck.builtin.brightnessdown"}
 		<div class="space-y-2 max-w-3xl">
-			<h3 class="text-sm font-semibold text-neutral-100">{instance.action.uuid.endsWith("up") ? "Brightness Up" : "Brightness Down"}</h3>
-			<p class="text-xs text-neutral-400">Controls Stream Deck brightness. Safety limits: minimum 5%, maximum 100%.</p>
-			<label class="block text-xs text-neutral-400" for="builtin-brightness-step">Step ({readNumber(currentSettings, "step", 10)}%)</label>
+			<h3 class="text-sm font-semibold text-neutral-100">{instance.action.uuid.endsWith("up") ? t("builtinInspector.brightness.upTitle") : t("builtinInspector.brightness.downTitle")}</h3>
+			<p class="text-xs text-neutral-400">{t("builtinInspector.brightness.description")}</p>
+			<label class="block text-xs text-neutral-400" for="builtin-brightness-step">{t("builtinInspector.brightness.step", { value: readNumber(currentSettings, "step", 10) })}</label>
 			<input
 				id="builtin-brightness-step"
 				type="range"
@@ -404,9 +398,9 @@
 		</div>
 	{:else if instance.action.uuid === "omegadeck.builtin.pomodoro"}
 		<div class="space-y-2 max-w-3xl">
-			<h3 class="text-sm font-semibold text-neutral-100">Pomodoro Timer</h3>
+			<h3 class="text-sm font-semibold text-neutral-100">{t("builtinInspector.pomodoro.title")}</h3>
 
-			<label class="block text-xs text-neutral-400" for="builtin-pomodoro-work">Work (min)</label>
+			<label class="block text-xs text-neutral-400" for="builtin-pomodoro-work">{t("builtinInspector.pomodoro.work")}</label>
 			<input
 				id="builtin-pomodoro-work"
 				type="number"
@@ -417,7 +411,7 @@
 				onchange={(e) => updateMany({ work_minutes: Number.parseInt(e.currentTarget.value, 10) || 25 })}
 			/>
 
-			<label class="block text-xs text-neutral-400" for="builtin-pomodoro-break">Break (min)</label>
+			<label class="block text-xs text-neutral-400" for="builtin-pomodoro-break">{t("builtinInspector.pomodoro.break")}</label>
 			<input
 				id="builtin-pomodoro-break"
 				type="number"
@@ -428,7 +422,7 @@
 				onchange={(e) => updateMany({ break_minutes: Number.parseInt(e.currentTarget.value, 10) || 5 })}
 			/>
 
-			<label class="block text-xs text-neutral-400" for="builtin-pomodoro-longbreak">Long break (min)</label>
+			<label class="block text-xs text-neutral-400" for="builtin-pomodoro-longbreak">{t("builtinInspector.pomodoro.longBreak")}</label>
 			<input
 				id="builtin-pomodoro-longbreak"
 				type="number"
@@ -439,7 +433,7 @@
 				onchange={(e) => updateMany({ long_break_minutes: Number.parseInt(e.currentTarget.value, 10) || 15 })}
 			/>
 
-			<label class="block text-xs text-neutral-400" for="builtin-pomodoro-sessions">Sessions until long break</label>
+			<label class="block text-xs text-neutral-400" for="builtin-pomodoro-sessions">{t("builtinInspector.pomodoro.sessionsUntilLongBreak")}</label>
 			<input
 				id="builtin-pomodoro-sessions"
 				type="number"
@@ -450,11 +444,11 @@
 				onchange={(e) => updateMany({ sessions_before_long_break: Number.parseInt(e.currentTarget.value, 10) || 4 })}
 			/>
 
-			<p class="text-xs text-neutral-400">Cycle preview</p>
+			<p class="text-xs text-neutral-400">{t("builtinInspector.pomodoro.cyclePreview")}</p>
 			<p class="text-xs text-neutral-300">{cyclePreview(currentSettings)}</p>
 
 			<hr class="border-neutral-700 my-2" />
-			<p class="text-xs font-semibold text-neutral-300">Alerts</p>
+			<p class="text-xs font-semibold text-neutral-300">{t("builtinInspector.pomodoro.alertsTitle")}</p>
 
 			<label class="inline-flex items-center gap-2 text-xs text-neutral-300" for="builtin-pomodoro-notify-system">
 				<input
@@ -463,7 +457,7 @@
 					checked={readBool(currentSettings, "notify_system", true)}
 					onchange={(e) => updateSetting("notify_system", e.currentTarget.checked)}
 				/>
-				System notification on phase change
+				{t("builtinInspector.pomodoro.notifySystem")}
 			</label>
 
 			<label class="inline-flex items-center gap-2 text-xs text-neutral-300" for="builtin-pomodoro-notify-sound">
@@ -473,7 +467,7 @@
 					checked={readBool(currentSettings, "notify_sound", true)}
 					onchange={(e) => updateSetting("notify_sound", e.currentTarget.checked)}
 				/>
-				Play sound on phase change
+				{t("builtinInspector.pomodoro.notifySound")}
 			</label>
 
 			<label class="inline-flex items-center gap-2 text-xs text-neutral-300" for="builtin-pomodoro-show-on-key">
@@ -483,12 +477,12 @@
 					checked={readBool(currentSettings, "show_on_key", true)}
 					onchange={(e) => updateSetting("show_on_key", e.currentTarget.checked)}
 				/>
-				Show countdown on Stream Deck key
+				{t("builtinInspector.pomodoro.showOnKey")}
 			</label>
 		</div>
 	{:else}
 		<div class="text-sm text-neutral-400 p-2">
-			No property inspector is available for this built-in action yet.
+			{t("builtinInspector.unsupported")}
 		</div>
 	{/if}
 </div>
