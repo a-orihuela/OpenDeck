@@ -8,6 +8,7 @@
 
 	import { getBuildInfo, getDevices, getSelectedProfile, setSelectedProfile } from "$lib/api/commands";
 	import { onDevices, onSwitchProfile } from "$lib/api/events";
+	import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 
 	let { devices = $bindable({}), value = $bindable(""), selectedProfiles = $bindable({}) }: {
 		devices?: { [id: string]: DeviceInfo };
@@ -57,6 +58,7 @@
 	onDevices((payload) => { devices = payload; });
 
 	(async () => { buildInfo = await getBuildInfo(); })();
+	const tauriWindow = getCurrentWindow();
 	$effect(() => {
 		if (devices[value]) {
 			const effectiveCols = Math.min(Math.max(devices[value].columns, devices[value].encoders, devices[value].touchpoints), 8);
@@ -64,11 +66,6 @@
 			const idealWidth = (effectiveCols * 132) + 416;
 			const idealHeight = (effectiveRows * 132) + 384 + (buildInfo?.split("</summary>")[0]?.includes("darwin") ? 28 : 0);
 			(async () => {
-				const [{ getCurrentWindow }, { LogicalSize }] = await Promise.all([
-					import("@tauri-apps/api/window"),
-					import("@tauri-apps/api/dpi"),
-				]);
-				const tauriWindow = getCurrentWindow();
 				const width = Math.min(idealWidth, screen.availWidth);
 				const height = Math.min(idealHeight, screen.availHeight);
 				await tauriWindow.setMinSize(new LogicalSize(width, height));
