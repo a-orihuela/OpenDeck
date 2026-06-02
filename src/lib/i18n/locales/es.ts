@@ -207,6 +207,7 @@ const es = {
 		viewOnGithub: "Ver plugin en GitHub",
 		dialogLabel: "Detalles del plugin {name}",
 		closeAria: "Cerrar",
+		authorAvatarAlt: "Avatar del autor",
 		by: "por",
 		install: "Instalar",
 		downloadLatestAria: "Descargar la última release desde GitHub",

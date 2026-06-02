@@ -2,16 +2,12 @@
 	import ArrowSquareOut from "phosphor-svelte/lib/ArrowSquareOut";
 	import DownloadSimple from "phosphor-svelte/lib/DownloadSimple";
 	import Popup from "./Popup.svelte";
-import { _ } from "$lib/i18n";
+	import { _ } from "$lib/i18n";
 
 	import "$lib/shims.ts";
 
 	import { openUrl } from "$lib/api/commands";
 	import { fetchPluginReadme, fetchTotalDownloadCount } from "$lib/services/pluginService";
-	import DOMPurify from "dompurify";
-	import { marked } from "marked";
-	import markedAlert from "marked-alert";
-	import { baseUrl } from "marked-base-url";
 
 	let { id, details, install, close }: {
 		id: string;
@@ -38,6 +34,16 @@ import { _ } from "$lib/i18n";
 		const repo = details.repository.split("/")[3] + "/" + details.repository.split("/")[4];
 
 		(async () => {
+			const [domPurifyModule, markedModule, markedAlertModule, markedBaseUrlModule] = await Promise.all([
+				import("dompurify"),
+				import("marked"),
+				import("marked-alert"),
+				import("marked-base-url"),
+			]);
+			const DOMPurify = domPurifyModule.default;
+			const { marked } = markedModule;
+			const markedAlert = markedAlertModule.default;
+			const { baseUrl } = markedBaseUrlModule;
 			const renderer = new marked.Renderer();
 			renderer.link = function (token) {
 				return marked.Renderer.prototype.link.call(this, token).replace("<a", `<a target="_blank" `);
@@ -73,7 +79,7 @@ import { _ } from "$lib/i18n";
 				<span class="mr-2">{t("pluginDetails.by")}</span>
 				<img
 					src={"https://avatars.githubusercontent.com/" + details.repository.split("/")[3]}
-					alt="Author avatar"
+					alt={t("pluginDetails.authorAvatarAlt")}
 					class="size-7 mr-1.5 rounded-full"
 				/>
 				<a
