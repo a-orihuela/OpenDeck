@@ -18,7 +18,24 @@ fn builtins_localisation(locale: &str) -> Result<serde_json::Value, Error> {
 		"es" => include_str!("../../../locales/es.json"),
 		_ => include_str!("../../../locales/en.json"),
 	};
-	Ok(serde_json::from_str(raw)?)
+
+	let mut localisations: serde_json::Value = serde_json::from_str(raw)?;
+
+	if let Some(map) = localisations.as_object_mut() {
+		let aliases = map
+			.iter()
+			.filter_map(|(key, value)| {
+				key.strip_prefix("omegadeck.builtin.")
+					.map(|suffix| (format!("omegadeck.{suffix}"), value.clone()))
+			})
+			.collect::<Vec<_>>();
+
+		for (alias, value) in aliases {
+			map.entry(alias).or_insert(value);
+		}
+	}
+
+	Ok(localisations)
 }
 
 #[derive(Debug, serde_with::SerializeDisplay, serde::Deserialize)]

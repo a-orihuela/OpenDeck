@@ -33,7 +33,7 @@
 					actions = actions.filter((action) => !FOLDER_FORBIDDEN_ACTIONS.has(action.uuid));
 				}
 				if (!displayCategoryName.toLowerCase().includes(lowerCaseQuery)) {
-					actions = actions.filter((action) => action.name.toLowerCase().includes(lowerCaseQuery));
+					actions = actions.filter((action) => actionLabel(action).toLowerCase().includes(lowerCaseQuery));
 				}
 				return [categoryName, { icon, actions }];
 			})

@@ -78,17 +78,26 @@ export function dismissNotification(id: string) {
 	const settings = await getSettings();
 	appState.settings = settings;
 	setAppLocale(settings.language);
+	try {
+		appState.localisations = await getLocalisations(settings.language);
+	} catch (e) {
+		notifyError(e, "warning");
+	}
 })();
 
 $effect.root(() => {
-	let prevSettings: Settings | null = null;
+	let lastSettingsSnapshot = "";
 	$effect(() => {
 		const s = appState.settings;
-		if (!s || s === prevSettings) return;
-		prevSettings = s;
+		if (!s) return;
+
+		const snapshot = JSON.stringify(s);
+		if (snapshot === lastSettingsSnapshot) return;
+		lastSettingsSnapshot = snapshot;
+
 		setAppLocale(s.language);
 		setSettings(s)
-			.then(() => getLocalisations(s!.language))
+			.then(() => getLocalisations(s.language))
 			.then(loc => { appState.localisations = loc; })
 			.catch(e => notifyError(e, "warning"));
 	});
