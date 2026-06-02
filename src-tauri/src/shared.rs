@@ -349,117 +349,92 @@ pub struct Profile {
 	pub num_pages: u8,
 }
 
+fn builtin_action_locale(uuid: &str) -> (&'static str, &'static str) {
+	static BUILTIN_LOCALE_EN: LazyLock<serde_json::Value> = LazyLock::new(|| {
+		serde_json::from_str(include_str!("../locales/en.json")).expect("valid builtin locale file")
+	});
+
+	let action = BUILTIN_LOCALE_EN.get(uuid).unwrap_or_else(|| panic!("missing builtin locale entry for {uuid}"));
+	(
+		action.get("Name").and_then(serde_json::Value::as_str).unwrap_or_default(),
+		action.get("Tooltip").and_then(serde_json::Value::as_str).unwrap_or_default(),
+	)
+}
+
+fn builtin_action(
+	uuid: &str,
+	icon: &str,
+	controllers: &[&str],
+	states: serde_json::Value,
+	disable_automatic_states: bool,
+	supported_in_multi_actions: bool,
+) -> Action {
+	let (name, tooltip) = builtin_action_locale(uuid);
+	serde_json::from_value(serde_json::json!({
+		"name": name,
+		"icon": icon,
+		"plugin": crate::constants::BUILTIN_PLUGIN,
+		"uuid": uuid,
+		"tooltip": tooltip,
+		"controllers": controllers,
+		"states": states,
+		"disable_automatic_states": disable_automatic_states,
+		"supported_in_multi_actions": supported_in_multi_actions,
+	}))
+	.unwrap()
+}
+
 /// A map of category names to a list of actions in that category.
 pub static CATEGORIES: LazyLock<RwLock<HashMap<String, Category>>> = LazyLock::new(|| {
 	let mut hashmap = HashMap::new();
 	hashmap.insert(
-		"Actions".to_owned(),
+		"builtin.actions".to_owned(),
 		Category {
 			icon: None,
 			actions: vec![
-				serde_json::from_value(serde_json::json!(
-					{
-						"name": "Multi Action",
-						"icon": "omegadeck/builtin/multi-action.svg",
-						"plugin": crate::constants::BUILTIN_PLUGIN,
-						"uuid": crate::constants::ACTION_MULTIACTION,
-						"tooltip": "Execute multiple actions",
-						"controllers": [ "Keypad" ],
-						"states": [ { "image": "omegadeck/builtin/multi-action.svg" } ],
-						"supported_in_multi_actions": false
-					}
-				))
-				.unwrap(),
-				serde_json::from_value(serde_json::json!(
-					{
-						"name": "Toggle Action",
-						"icon": "omegadeck/builtin/toggle-action.svg",
-						"plugin": crate::constants::BUILTIN_PLUGIN,
-						"uuid": crate::constants::ACTION_TOGGLEACTION,
-						"tooltip": "Cycle through multiple actions",
-						"controllers": [ "Keypad" ],
-						"states": [ { "image": "omegadeck/builtin/toggle-action.svg" } ],
-						"supported_in_multi_actions": false
-					}
-				))
-				.unwrap(),
+				builtin_action(crate::constants::ACTION_MULTIACTION, "omegadeck/builtin/multi-action.svg", &["Keypad"], serde_json::json!([{ "image": "omegadeck/builtin/multi-action.svg" }]), false, false),
+				builtin_action(crate::constants::ACTION_TOGGLEACTION, "omegadeck/builtin/toggle-action.svg", &["Keypad"], serde_json::json!([{ "image": "omegadeck/builtin/toggle-action.svg" }]), false, false),
 			],
 		},
 	);
 	hashmap.insert(
-		"Navigation".to_owned(),
+		"builtin.navigation".to_owned(),
 		Category {
 			icon: None,
 			actions: vec![
-				serde_json::from_value(serde_json::json!(
-					{
-						"name": "Next Page",
-						"icon": "omegadeck/builtin/next-page.svg",
-						"plugin": crate::constants::BUILTIN_PLUGIN,
-						"uuid": crate::constants::ACTION_NEXTPAGE,
-						"tooltip": "Go to the next page",
-						"controllers": [ "Keypad" ],
-						"states": [ { "image": "omegadeck/builtin/next-page.svg" } ],
-						"supported_in_multi_actions": false
-					}
-				))
-				.unwrap(),
-				serde_json::from_value(serde_json::json!(
-					{
-						"name": "Previous Page",
-						"icon": "omegadeck/builtin/previous-page.svg",
-						"plugin": crate::constants::BUILTIN_PLUGIN,
-						"uuid": crate::constants::ACTION_PREVIOUSPAGE,
-						"tooltip": "Go to the previous page",
-						"controllers": [ "Keypad" ],
-						"states": [ { "image": "omegadeck/builtin/previous-page.svg" } ],
-						"supported_in_multi_actions": false
-					}
-				))
-				.unwrap(),
-				serde_json::from_value(serde_json::json!(
-					{
-						"name": "Folder",
-						"icon": "omegadeck/builtin/folder.svg",
-						"plugin": crate::constants::BUILTIN_PLUGIN,
-						"uuid": crate::constants::ACTION_FOLDER,
-						"tooltip": "Open a folder of actions",
-						"controllers": [ "Keypad" ],
-						"states": [ { "image": "omegadeck/builtin/folder.svg" } ],
-						"supported_in_multi_actions": false
-					}
-				))
-				.unwrap(),
+				builtin_action(crate::constants::ACTION_NEXTPAGE, "omegadeck/builtin/next-page.svg", &["Keypad"], serde_json::json!([{ "image": "omegadeck/builtin/next-page.svg" }]), false, false),
+				builtin_action(crate::constants::ACTION_PREVIOUSPAGE, "omegadeck/builtin/previous-page.svg", &["Keypad"], serde_json::json!([{ "image": "omegadeck/builtin/previous-page.svg" }]), false, false),
+				builtin_action(crate::constants::ACTION_FOLDER, "omegadeck/builtin/folder.svg", &["Keypad"], serde_json::json!([{ "image": "omegadeck/builtin/folder.svg" }]), false, false),
 			],
 		},
 	);
 	// ── Automation ──────────────────────────────────────────────────────────
-	hashmap.insert("Automation".to_owned(), Category { icon: None, actions: vec![
-		serde_json::from_value(serde_json::json!({"name":"Run Command","icon":"omegadeck/builtin/run-command.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.runcommand","tooltip":"Run a shell command","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Open URL","icon":"omegadeck/builtin/open-url.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.openurl","tooltip":"Open a URL in the default browser","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Simulate Input","icon":"omegadeck/builtin/simulate-input.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.inputsimulation","tooltip":"Simulate keyboard shortcuts","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
+	hashmap.insert("builtin.automation".to_owned(), Category { icon: None, actions: vec![
+		builtin_action("omegadeck.builtin.runcommand", "omegadeck/builtin/run-command.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
+		builtin_action("omegadeck.builtin.openurl", "omegadeck/builtin/open-url.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
+		builtin_action("omegadeck.builtin.inputsimulation", "omegadeck/builtin/simulate-input.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
 	]});
 	// ── Media ────────────────────────────────────────────────────────────────
-	hashmap.insert("Media".to_owned(), Category { icon: None, actions: vec![
-		serde_json::from_value(serde_json::json!({"name":"Volume Up","icon":"omegadeck/builtin/volume-up.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.volumeup","tooltip":"Increase system volume","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Volume Down","icon":"omegadeck/builtin/volume-down.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.volumedown","tooltip":"Decrease system volume","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Mute","icon":"omegadeck/builtin/volume-on.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.mute","tooltip":"Toggle system mute","disable_automatic_states":true,"controllers":["Keypad","Encoder"],"states":[{"image":"omegadeck/builtin/volume-on.svg"},{"image":"omegadeck/builtin/mute.svg"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Play / Pause","icon":"omegadeck/builtin/play.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.playpause","tooltip":"Play or pause media","disable_automatic_states":true,"controllers":["Keypad","Encoder"],"states":[{"image":"omegadeck/builtin/play.svg"},{"image":"omegadeck/builtin/pause.svg"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Next Track","icon":"omegadeck/builtin/next-track.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.nexttrack","tooltip":"Skip to next track","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Previous Track","icon":"omegadeck/builtin/prev-track.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.prevtrack","tooltip":"Go to previous track","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
+	hashmap.insert("builtin.media".to_owned(), Category { icon: None, actions: vec![
+		builtin_action("omegadeck.builtin.volumeup", "omegadeck/builtin/volume-up.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
+		builtin_action("omegadeck.builtin.volumedown", "omegadeck/builtin/volume-down.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
+		builtin_action("omegadeck.builtin.mute", "omegadeck/builtin/volume-on.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"omegadeck/builtin/volume-on.svg"},{"image":"omegadeck/builtin/mute.svg"}]), true, true),
+		builtin_action("omegadeck.builtin.playpause", "omegadeck/builtin/play.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"omegadeck/builtin/play.svg"},{"image":"omegadeck/builtin/pause.svg"}]), true, true),
+		builtin_action("omegadeck.builtin.nexttrack", "omegadeck/builtin/next-track.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
+		builtin_action("omegadeck.builtin.prevtrack", "omegadeck/builtin/prev-track.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
 	]});
 	// ── System ───────────────────────────────────────────────────────────────
-	hashmap.insert("System".to_owned(), Category { icon: None, actions: vec![
-		serde_json::from_value(serde_json::json!({"name":"Lock Screen","icon":"omegadeck/builtin/lock-screen.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.lockscreen","tooltip":"Lock the screen","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Sleep","icon":"omegadeck/builtin/sleep.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.sleep","tooltip":"Suspend the computer","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Screenshot","icon":"omegadeck/builtin/screenshot.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.screenshot","tooltip":"Take a screenshot","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Brightness Up","icon":"omegadeck/builtin/brightness-up.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.brightnessup","tooltip":"Increase Stream Deck brightness","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Brightness Down","icon":"omegadeck/builtin/brightness-down.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.brightnessdown","tooltip":"Decrease Stream Deck brightness","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
+	hashmap.insert("builtin.system".to_owned(), Category { icon: None, actions: vec![
+		builtin_action("omegadeck.builtin.lockscreen", "omegadeck/builtin/lock-screen.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
+		builtin_action("omegadeck.builtin.sleep", "omegadeck/builtin/sleep.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
+		builtin_action("omegadeck.builtin.screenshot", "omegadeck/builtin/screenshot.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
+		builtin_action("omegadeck.builtin.brightnessup", "omegadeck/builtin/brightness-up.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
+		builtin_action("omegadeck.builtin.brightnessdown", "omegadeck/builtin/brightness-down.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
 	]});
 	// ── Productivity ─────────────────────────────────────────────────────────
-	hashmap.insert("Productivity".to_owned(), Category { icon: None, actions: vec![
-		serde_json::from_value(serde_json::json!({"name":"Switch Profile","icon":"omegadeck/builtin/switch-profile.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.switchprofile","tooltip":"Switch to a different profile","controllers":["Keypad","Encoder"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
-		serde_json::from_value(serde_json::json!({"name":"Pomodoro Timer","icon":"omegadeck/builtin/pomodoro.svg","plugin":crate::constants::BUILTIN_PLUGIN,"uuid":"omegadeck.builtin.pomodoro","tooltip":"Pomodoro timer on the key","controllers":["Keypad"],"states":[{"image":"actionDefaultImage"}]})).unwrap(),
+	hashmap.insert("builtin.productivity".to_owned(), Category { icon: None, actions: vec![
+		builtin_action("omegadeck.builtin.switchprofile", "omegadeck/builtin/switch-profile.svg", &["Keypad", "Encoder"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
+		builtin_action("omegadeck.builtin.pomodoro", "omegadeck/builtin/pomodoro.svg", &["Keypad"], serde_json::json!([{"image":"actionDefaultImage"}]), false, true),
 	]});
 
 	RwLock::new(hashmap)

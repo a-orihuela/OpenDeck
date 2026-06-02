@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { fly } from "svelte/transition";
+	import { _ } from "$lib/i18n";
 	import { appState, dismiss } from "$lib/notifications";
 </script>
 
@@ -12,7 +13,7 @@
 					{n.level === 'error' ? 'bg-red-700 text-white' : n.level === 'warning' ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-white'}"
 			>
 				<span class="flex-1 break-words">{n.message}</span>
-				<button class="ml-2 opacity-70 hover:opacity-100" onclick={() => dismiss(n.id)}>✕</button>
+				<button class="ml-2 opacity-70 hover:opacity-100" onclick={() => dismiss(n.id)} aria-label={$_("common.close")}>✕</button>
 			</div>
 		{/each}
 	</div>

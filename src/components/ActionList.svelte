@@ -28,10 +28,11 @@
 		return Object.entries(categories)
 			.sort((a, b) => a[0].localeCompare(b[0]))
 			.map(([categoryName, { icon, actions }]): [string, { icon?: string | null; actions: Action[] }] => {
+				const displayCategoryName = localizeCategory(categoryName);
 				if (appState.inFolderMode) {
 					actions = actions.filter((action) => !FOLDER_FORBIDDEN_ACTIONS.has(action.uuid));
 				}
-				if (!categoryName.toLowerCase().includes(lowerCaseQuery)) {
+				if (!displayCategoryName.toLowerCase().includes(lowerCaseQuery)) {
 					actions = actions.filter((action) => action.name.toLowerCase().includes(lowerCaseQuery));
 				}
 				return [categoryName, { icon, actions }];
@@ -43,7 +44,8 @@
 	const t = (key: string, values?: Record<string, unknown>) => translate(key, { values });
 
 	function localizeCategory(name: string): string {
-		const key = `builtinCategories.${name.toLowerCase()}`;
+		const normalized = name.startsWith("builtin.") ? name.slice("builtin.".length) : name.toLowerCase();
+		const key = `builtinCategories.${normalized}`;
 		const value = t(key);
 		return value === key ? name : value;
 	}
