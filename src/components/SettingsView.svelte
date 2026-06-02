@@ -13,7 +13,7 @@
 	import { backupConfigDirectory, getBuildInfo, openConfigDirectory, openLogDirectory, restoreConfigDirectory } from "$lib/api/commands";
 	import { _ } from "$lib/i18n";
 	import { message } from "@tauri-apps/plugin-dialog";
-	import { notify } from "$lib/notifications";
+	import { notifyError } from "$lib/notifications";
 	import { get } from "svelte/store";
 
 	let {
@@ -51,7 +51,7 @@
 		try {
 			await restoreConfigDirectory();
 		} catch (error: any) {
-			notify(String(error));
+			notifyError(error);
 		}
 	}
 </script>

@@ -17,6 +17,7 @@
 	import { getWebserverUrl } from "$lib/ports";
 	import { appState } from "$lib/settings";
 	import { actionList, deviceSelector, PRODUCT_NAME } from "$lib/singletons";
+	import { formatError } from "$lib/notifications";
 	import { get } from "svelte/store";
 	import { untrack } from "svelte";
 
@@ -69,7 +70,7 @@
 			get(actionList)?.reload();
 			installed = await listPlugins();
 		} catch (error: any) {
-			message(error, { title: t("plugins.dialogs.installFailureTitle", { name }) });
+			message(formatError(error), { title: t("plugins.dialogs.installFailureTitle", { name }) });
 		} finally {
 			installProgress = null;
 		}
@@ -107,7 +108,7 @@
 		try {
 			releases = await fetchGitHubReleases(plugin.repository);
 		} catch (error: any) {
-			message(error, { title: t("plugins.dialogs.installFailureTitle", { name: plugin.name }) });
+			message(formatError(error), { title: t("plugins.dialogs.installFailureTitle", { name: plugin.name }) });
 			return;
 		}
 		const assets = filterInstallableAssets(releases);
@@ -139,7 +140,7 @@
 			get(deviceSelector)?.reloadProfiles();
 			installed = await listPlugins();
 		} catch (error: any) {
-			message(error, { title: t("plugins.dialogs.removeFailureTitle", { name: plugin.name }) });
+			message(formatError(error), { title: t("plugins.dialogs.removeFailureTitle", { name: plugin.name }) });
 		}
 	}
 

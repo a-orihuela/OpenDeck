@@ -9,7 +9,7 @@
 	import Popup from "./Popup.svelte";
 
 	import { appState } from "$lib/propertyInspector";
-	import { notify } from "$lib/notifications";
+	import { formatError, notifyError } from "$lib/notifications";
 
 	import {
 		deleteProfile as apiDeleteProfile,
@@ -53,7 +53,7 @@
 			value = profile?.id || profiles[0] || "Default";
 			oldValue = value;
 		} catch (error: any) {
-			notify(String(error), "warning");
+			notifyError(error, "warning");
 			folders = { "": ["Default"] };
 			value = "Default";
 			oldValue = "Default";
@@ -88,7 +88,7 @@
 		try {
 			profile = await apiGetSelectedProfile(device.id);
 		} catch (e: any) {
-			notify(String(e), "warning");
+			notifyError(e, "warning");
 		}
 	});
 
@@ -123,7 +123,7 @@
 		try {
 			await apiRenameProfile(device.id, oldId, newId, false);
 		} catch (error: any) {
-			message(error, { title: t("profiles.dialogs.renameFailed") });
+			message(formatError(error), { title: t("profiles.dialogs.renameFailed") });
 			console.error(error);
 			return;
 		}

@@ -1,7 +1,8 @@
 import type { Action, Context, Settings } from "../bindings.ts";
 import { getLocalisations, getSettings, setSettings, switchPropertyInspector } from "../api/commands.ts";
 import { onPluginStatusChanged } from "../api/events.ts";
-import { setAppLocale } from "../i18n";
+import { _, setAppLocale } from "../i18n";
+import { get } from "svelte/store";
 
 export type CopiedItem =
 	| { type: "instance"; source: Context }
@@ -35,6 +36,39 @@ export function notify(message: string, level: NotificationLevel = "error") {
 	setTimeout(() => dismissNotification(id), 8000);
 }
 
+function extractErrorMessage(error: unknown): string {
+	if (typeof error === "string") return error;
+	if (error instanceof Error) return error.message || String(error);
+	if (error && typeof error === "object") {
+		const candidate = error as { description?: unknown; message?: unknown; error?: unknown };
+		if (typeof candidate.description === "string") return candidate.description;
+		if (typeof candidate.message === "string") return candidate.message;
+		if (typeof candidate.error === "string") return candidate.error;
+	}
+	return String(error ?? "");
+}
+
+function localizeErrorMessage(raw: string): string {
+	const clean = raw.replace(/^Error:\s*/i, "").trim();
+	if (!clean || clean === "[object Object]") return get(_)("errors.generic");
+
+	const value = clean.toLowerCase();
+	if (value.includes("permission denied")) return get(_)("errors.permissionDenied");
+	if (value.includes("no such file") || value.includes("not found")) return get(_)("errors.notFound");
+	if (value.includes("timeout") || value.includes("timed out")) return get(_)("errors.timeout");
+	if (value.includes("failed to fetch") || value.includes("connection refused") || value.includes("network")) return get(_)("errors.network");
+	if (value.includes("already exists")) return get(_)("errors.alreadyExists");
+	return clean;
+}
+
+export function formatError(error: unknown): string {
+	return localizeErrorMessage(extractErrorMessage(error));
+}
+
+export function notifyError(error: unknown, level: NotificationLevel = "error") {
+	notify(formatError(error), level);
+}
+
 export function dismissNotification(id: string) {
 	appState.notifications = appState.notifications.filter((item) => item.id !== id);
 }
@@ -55,7 +89,7 @@ $effect.root(() => {
 		setSettings(s)
 			.then(() => getLocalisations(s!.language))
 			.then(loc => { appState.localisations = loc; })
-			.catch(e => notify(String(e), "warning"));
+			.catch(e => notifyError(e, "warning"));
 	});
 
 	onPluginStatusChanged((uuid, connected) => {

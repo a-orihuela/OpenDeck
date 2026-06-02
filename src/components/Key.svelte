@@ -10,7 +10,7 @@
 
 	import { appState } from "$lib/propertyInspector";
 	import { CanvasLock, renderImage } from "$lib/rendererHelper";
-	import { notify } from "$lib/notifications";
+	import { notifyError } from "$lib/notifications";
 
 	import { ACTION_FOLDER, ACTION_MULTIACTION, ACTION_TOGGLEACTION, BUILTIN_PLUGIN } from "$lib/constants";
 	import { enterFolder, removeInstance, triggerVirtualPress as apiTriggerVirtualPress, updateImage } from "$lib/api/commands";
@@ -140,7 +140,7 @@
 		try {
 			await removeInstance(slot.context);
 		} catch (error: any) {
-			notify(String(error));
+			notifyError(error);
 			return;
 		}
 		showEditor = false;

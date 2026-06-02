@@ -12,7 +12,7 @@
 	import { addPage, exitFolder, getActivePage, removeLastPage, setActivePage } from "$lib/api/commands";
 	import { onFolderClosed, onFolderOpened, onPageChanged } from "$lib/api/events";
 	import { computeGridRowLengths, dropMoveInstance, dropNewAction, flatIndexFromRowCol, pasteItem, rowColFromFlatIndex } from "$lib/services/deviceService";
-	import { notify } from "$lib/notifications";
+	import { notifyError } from "$lib/notifications";
 
 	let { device = $bindable(), profile = $bindable(), selectedDevice = $bindable("") }: {
 		device: DeviceInfo;
@@ -123,7 +123,7 @@
 				}
 			}
 		} catch (error: any) {
-			notify(String(error));
+			notifyError(error);
 		}
 	}
 
@@ -136,7 +136,7 @@
 				profile = { ...profile };
 			}
 		} catch (error: any) {
-			notify(String(error));
+			notifyError(error);
 		}
 	}
 
@@ -145,7 +145,7 @@
 			const newCount = await addPage(device.id);
 			profile = { ...profile, num_pages: newCount };
 		} catch (error: any) {
-			notify(String(error));
+			notifyError(error);
 		}
 	}
 
@@ -155,7 +155,7 @@
 			profile = { ...profile, num_pages: newCount };
 			if (activePage >= newCount) activePage = newCount - 1;
 		} catch (error: any) {
-			notify(String(error));
+			notifyError(error);
 		}
 	}
 
@@ -168,7 +168,7 @@
 		try {
 			await exitFolder(device.id);
 		} catch (error: any) {
-			notify(String(error));
+			notifyError(error);
 		}
 	}
 

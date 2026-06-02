@@ -329,6 +329,14 @@ const en = {
 		},
 		unsupported: "No property inspector is available for this built-in action yet.",
 	},
+	errors: {
+		generic: "Something went wrong.",
+		permissionDenied: "Permission denied.",
+		notFound: "Resource not found.",
+		timeout: "Operation timed out.",
+		network: "Network error.",
+		alreadyExists: "Resource already exists.",
+	},
 };
 
 export default en;

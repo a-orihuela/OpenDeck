@@ -329,6 +329,14 @@ const es = {
 		},
 		unsupported: "Todavía no hay inspector de propiedades para esta acción built-in.",
 	},
+	errors: {
+		generic: "Algo salió mal.",
+		permissionDenied: "Permiso denegado.",
+		notFound: "Recurso no encontrado.",
+		timeout: "La operación excedió el tiempo límite.",
+		network: "Error de red.",
+		alreadyExists: "El recurso ya existe.",
+	},
 };
 
 export default es;
