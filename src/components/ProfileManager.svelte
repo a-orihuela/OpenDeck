@@ -39,14 +39,28 @@
 	let oldValue = $state("");
 
 	async function getProfiles(dev: DeviceInfo) {
-		const profiles = await apiGetProfiles(dev.id);
-		folders = organizeIntoFolders(profiles);
-		profile = await apiGetSelectedProfile(dev.id);
-		value = profile.id;
-		oldValue = value;
+		try {
+			const profiles = await apiGetProfiles(dev.id);
+			folders = organizeIntoFolders(profiles);
+			if (Object.keys(folders).length === 0) {
+				folders = { "": ["Default"] };
+			}
+			profile = await apiGetSelectedProfile(dev.id);
+			value = profile?.id || profiles[0] || "Default";
+			oldValue = value;
+		} catch (error: any) {
+			notify(String(error), "warning");
+			folders = { "": ["Default"] };
+			value = "Default";
+			oldValue = "Default";
+		}
 	}
 
-	getProfiles(device);
+	$effect(() => {
+		if (device?.id) {
+			getProfiles(device);
+		}
+	});
 
 	export async function setProfile(id: string) {
 		if (!device || !id) return;
@@ -128,8 +142,8 @@
 		const v = value;
 		if (v == "omegadeck_edit_profiles") {
 			const prev = untrack(() => oldValue);
-			if (prev) showPopup = true;
-			untrack(() => { value = prev; });
+			showPopup = true;
+			untrack(() => { value = prev || profile?.id || "Default"; });
 		} else {
 			const prev = untrack(() => oldValue);
 			const p = untrack(() => profile);
@@ -194,15 +208,18 @@
 <div class="select-profile-wrapper">
 	<span bind:this={measure} class="invisible fixed whitespace-pre pointer-events-none" aria-hidden="true"></span>
 	<select bind:value style:width="{selectWidth}px" aria-label="Profile">
+		{#if flatProfileList(folders).length === 0}
+			<option value="Default">Default</option>
+		{/if}
 		{#each Object.entries(folders).sort() as [id, profiles]}
 			{#if id && profiles.length}
 				<optgroup label={id}>
-					{#each profiles.sort() as prof}
+					{#each [...profiles].sort() as prof}
 						<option value={prof}>{prof.split("/")[1]}</option>
 					{/each}
 				</optgroup>
 			{:else}
-				{#each profiles.sort() as prof}
+				{#each [...profiles].sort() as prof}
 					<option value={prof}>{prof}</option>
 				{/each}
 			{/if}
@@ -221,7 +238,7 @@
 	}}
 />
 
-<Popup show={showPopup} label="{device.name} profiles">
+<Popup show={showPopup} label={device.name + " profiles"}>
 	{#snippet children()}
 	<button class="mr-1 float-right text-xl text-neutral-300" onclick={() => { showPopup = false; }} aria-label="Close">✕</button>
 	<h2 class="text-xl font-semibold text-neutral-300">{device.name}</h2>
@@ -260,7 +277,7 @@
 			{#if id && profiles.length}
 				<h4 class="py-2 font-bold text-lg text-neutral-300">{id}</h4>
 			{/if}
-			{#each profiles.sort() as prof}
+			{#each [...profiles].sort() as prof}
 				<div class="flex flex-row items-center py-2 space-x-2" class:ml-6={id} class:pl-2={id}>
 					<input type="radio" bind:group={value} value={prof} disabled={renamingProfile == prof} id={`profile-${encodeURIComponent(prof)}`} aria-label={id ? prof.split("/")[1] : prof} />
 					{#if prof == renamingProfile}

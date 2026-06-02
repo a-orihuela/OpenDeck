@@ -19,7 +19,8 @@ pub async fn get_selected_profile(device: String) -> Result<crate::shared::Profi
 	}
 
 	let selected_profile = locks.device_stores.get_selected_profile(&device)?;
-	let profile = locks.profile_stores.get_profile_store(&DEVICES.get(&device).unwrap(), &selected_profile)?;
+	// Ensure the selected profile store exists in memory before reading it.
+	let profile = locks.profile_stores.get_profile_store_mut(&DEVICES.get(&device).unwrap(), &selected_profile).await?;
 
 	Ok(profile.value.clone())
 }

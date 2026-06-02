@@ -28,7 +28,9 @@ export function updateFoldersAfterRename(
 	oldId: string,
 	newId: string,
 ): Record<string, string[]> {
-	const next = structuredClone(folders) as Record<string, string[]>;
+	const next: Record<string, string[]> = Object.fromEntries(
+		Object.entries(folders).map(([key, values]) => [key, [...values]])
+	);
 	const oldFolder = oldId.includes("/") ? oldId.split("/")[0] : "";
 	const newFolder = newId.includes("/") ? newId.split("/")[0] : "";
 
@@ -50,11 +52,14 @@ export function removeFolderEntry(
 	folders: Record<string, string[]>,
 	id: string,
 ): Record<string, string[]> {
-	const next = structuredClone(folders) as Record<string, string[]>;
+	const next: Record<string, string[]> = Object.fromEntries(
+		Object.entries(folders).map(([key, values]) => [key, [...values]])
+	);
 	const folder = id.includes("/") ? id.split("/")[0] : "";
 	if (!next[folder]) return next;
 	const idx = next[folder].indexOf(id);
 	if (idx !== -1) next[folder].splice(idx, 1);
+	if (next[folder].length === 0 && folder !== "") delete next[folder];
 	return next;
 }
 
