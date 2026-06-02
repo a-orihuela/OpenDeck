@@ -1,7 +1,9 @@
 {
 	"tasks": {
 		"icons:generate": "deno run -A scripts/generate_phosphor_svgs.ts",
-		"icons:generate:dry": "deno run -A scripts/generate_phosphor_svgs.ts --dry-run"
+		"icons:generate:dry": "deno run -A scripts/generate_phosphor_svgs.ts --dry-run",
+		"i18n:check": "deno run -A scripts/check_i18n_literals.ts",
+		"check": "deno task i18n:check && npm run check"
 	},
 	"exclude": ["src-tauri", "node_modules", "build", ".svelte-kit"],
 	"fmt": {

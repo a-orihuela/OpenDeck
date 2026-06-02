@@ -116,3 +116,61 @@ pub async fn remove_last_page(device: String) -> Result<u8, Error> {
 	}
 	Ok(num_pages)
 }
+
+#[command]
+pub async fn remove_page(device: String, page: u8) -> Result<u8, Error> {
+	let mut locks = acquire_locks_mut().await;
+	let device_info = DEVICES.get(&device).ok_or_else(|| Error::new(format!("device {device} not found")))?;
+	let selected_profile = locks.device_stores.get_selected_profile(&device)?;
+	let current_page = DEVICE_ACTIVE_PAGES.get(&device).map(|p| *p).unwrap_or(0);
+	let num_pages = locks.profile_stores.remove_page(&device_info, &selected_profile, page).await?;
+
+	let next_page = if current_page > page {
+		current_page - 1
+	} else if current_page >= num_pages {
+		num_pages - 1
+	} else {
+		current_page
+	};
+
+	let app = crate::APP_HANDLE.get().unwrap();
+	DEVICE_ACTIVE_PAGES.insert(device.clone(), next_page);
+	let _ = app
+		.get_webview_window("main")
+		.unwrap()
+		.emit("page_changed", PageChangedPayload { device: device.clone(), page: next_page });
+
+	save_profile(&device, &mut locks).await?;
+	Ok(num_pages)
+}
+
+#[command]
+pub async fn move_page(device: String, from: u8, to: u8) -> Result<u8, Error> {
+	let mut locks = acquire_locks_mut().await;
+	let device_info = DEVICES.get(&device).ok_or_else(|| Error::new(format!("device {device} not found")))?;
+	let selected_profile = locks.device_stores.get_selected_profile(&device)?;
+	let current_page = DEVICE_ACTIVE_PAGES.get(&device).map(|p| *p).unwrap_or(0);
+	let num_pages = locks.profile_stores.move_page(&device_info, &selected_profile, from, to).await?;
+
+	let next_page = if from == to {
+		current_page
+	} else if current_page == from {
+		to
+	} else if from < current_page && current_page <= to {
+		current_page - 1
+	} else if to <= current_page && current_page < from {
+		current_page + 1
+	} else {
+		current_page
+	};
+
+	let app = crate::APP_HANDLE.get().unwrap();
+	DEVICE_ACTIVE_PAGES.insert(device.clone(), next_page);
+	let _ = app
+		.get_webview_window("main")
+		.unwrap()
+		.emit("page_changed", PageChangedPayload { device: device.clone(), page: next_page });
+
+	save_profile(&device, &mut locks).await?;
+	Ok(num_pages)
+}

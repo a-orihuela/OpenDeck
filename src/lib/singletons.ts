@@ -1,5 +1,4 @@
-import text from "../product_name.txt?raw" with { type: "text" };
-export const PRODUCT_NAME = text.trim();
+export const PRODUCT_NAME = "OmegaDeck";
 
 import { type Writable, writable } from "svelte/store";
 

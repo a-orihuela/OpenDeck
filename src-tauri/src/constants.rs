@@ -14,6 +14,7 @@ pub const PORT_WEBSERVER_OFFSET: u16 = 2;
 pub const DIR_PLUGINS: &str = "plugins";
 pub const DIR_PROFILES: &str = "profiles";
 pub const DIR_SETTINGS: &str = "settings";
+pub const FILE_SHEET_TEMPLATES: &str = "sheet_templates";
 pub const FILE_PORTS_LOCK: &str = "ports.json";
 
 // ── Built-in plugin identifier ────────────────────────────────────────────────

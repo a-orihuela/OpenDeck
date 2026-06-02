@@ -30,6 +30,13 @@
 	$effect(() => { deviceSelector.set(deviceSelectorRef); });
 	$effect(() => { profileManager.set(profileManagerRef); });
 
+	$effect(() => {
+		appState.selectedDevice = selectedDevice || null;
+		appState.selectedProfile = selectedDevice && selectedProfiles[selectedDevice]
+			? selectedProfiles[selectedDevice].id
+			: null;
+	});
+
 	initPortBase();
 </script>
 

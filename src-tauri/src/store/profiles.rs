@@ -19,6 +19,38 @@ pub struct ProfileStores {
 }
 
 impl ProfileStores {
+	fn reindex_instance_context(instance: &mut ActionInstance, device: &str, profile: &str, position: u8, index: u16) {
+		instance.context = crate::shared::ActionContext {
+			device: device.to_owned(),
+			profile: profile.to_owned(),
+			controller: "Keypad".to_owned(),
+			position,
+			index,
+		};
+
+		if let Some(children) = &mut instance.children {
+			for (child_index, child) in children.iter_mut().enumerate() {
+				Self::reindex_instance_context(child, device, profile, position, (child_index + 1) as u16);
+			}
+		}
+
+		if let Some(folder_slots) = &mut instance.folder_slots {
+			for (folder_position, slot) in folder_slots.iter_mut().enumerate() {
+				if let Some(child) = slot {
+					Self::reindex_instance_context(child, device, profile, folder_position as u8, 0);
+				}
+			}
+		}
+	}
+
+	fn reindex_key_contexts(store: &mut Store<Profile>, device: &str) {
+		for (position, slot) in store.value.keys.iter_mut().enumerate() {
+			if let Some(instance) = slot {
+				Self::reindex_instance_context(instance, device, &store.value.id, position as u8, 0);
+			}
+		}
+	}
+
 	fn canonical_id(device: &str, id: &str) -> String {
 		if cfg!(target_os = "windows") {
 			PathBuf::from(device).join(id.replace('/', "\\")).to_str().unwrap().to_owned()
@@ -90,6 +122,7 @@ impl ProfileStores {
 		store.value.keys.resize(page_slots, None);
 		store.value.keys.extend(tp_data);
 		store.value.keys.resize(total_keys, None);
+		Self::reindex_key_contexts(store, &device.id);
 		let num_pages = store.value.num_pages;
 		store.save()?;
 		Ok(num_pages)
@@ -97,17 +130,67 @@ impl ProfileStores {
 
 	pub async fn remove_last_page(&mut self, device: &DeviceInfo, id: &str) -> Result<u8, anyhow::Error> {
 		let store = self.get_profile_store_mut(device, id).await?;
+		let target_page = store.value.num_pages.saturating_sub(1);
+		Self::remove_page_impl(store, device, target_page)
+	}
+
+	pub async fn remove_page(&mut self, device: &DeviceInfo, id: &str, page: u8) -> Result<u8, anyhow::Error> {
+		let store = self.get_profile_store_mut(device, id).await?;
+		Self::remove_page_impl(store, device, page)
+	}
+
+	fn remove_page_impl(store: &mut Store<Profile>, device: &DeviceInfo, page: u8) -> Result<u8, anyhow::Error> {
 		if store.value.num_pages <= 1 {
 			return Err(anyhow!("profile must have at least one page"));
 		}
-		store.value.num_pages -= 1;
-		let page_slots = (device.rows * device.columns) as usize * store.value.num_pages as usize;
-		let total_keys = page_slots + device.touchpoints as usize;
-		let old_tp_start = store.value.keys.len().saturating_sub(device.touchpoints as usize);
+		if page >= store.value.num_pages {
+			return Err(anyhow!("page index out of bounds"));
+		}
+
+		let page_size = (device.rows * device.columns) as usize;
+		let old_page_count = store.value.num_pages as usize;
+		let old_page_slots = page_size * old_page_count;
+		let old_tp_start = old_page_slots;
 		let tp_data: Vec<_> = store.value.keys.drain(old_tp_start..).collect();
-		store.value.keys.truncate(page_slots);
+
+		let remove_start = page as usize * page_size;
+		let remove_end = remove_start + page_size;
+		store.value.keys.drain(remove_start..remove_end);
+
+		store.value.num_pages -= 1;
+		let new_page_slots = page_size * store.value.num_pages as usize;
+		store.value.keys.truncate(new_page_slots);
 		store.value.keys.extend(tp_data);
-		store.value.keys.resize(total_keys, None);
+		Self::reindex_key_contexts(store, &device.id);
+
+		let num_pages = store.value.num_pages;
+		store.save()?;
+		Ok(num_pages)
+	}
+
+	pub async fn move_page(&mut self, device: &DeviceInfo, id: &str, from: u8, to: u8) -> Result<u8, anyhow::Error> {
+		let store = self.get_profile_store_mut(device, id).await?;
+		if from >= store.value.num_pages || to >= store.value.num_pages {
+			return Err(anyhow!("page index out of bounds"));
+		}
+		if from == to {
+			return Ok(store.value.num_pages);
+		}
+
+		let page_size = (device.rows * device.columns) as usize;
+		let page_slots = page_size * store.value.num_pages as usize;
+		let tp_data: Vec<_> = store.value.keys.drain(page_slots..).collect();
+		let mut pages = store.value.keys.split_off(0);
+
+		let from_start = from as usize * page_size;
+		let moving_page: Vec<_> = pages.drain(from_start..from_start + page_size).collect();
+		let to_start = to as usize * page_size;
+		pages.splice(to_start..to_start, moving_page);
+
+		store.value.keys = pages;
+		store.value.keys.extend(tp_data);
+		Self::reindex_key_contexts(store, &device.id);
+
 		let num_pages = store.value.num_pages;
 		store.save()?;
 		Ok(num_pages)

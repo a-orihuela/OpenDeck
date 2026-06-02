@@ -9,7 +9,7 @@
 	
 	import { renderImage } from "$lib/rendererHelper";
 
-	import { addPage, exitFolder, getActivePage, removeLastPage, setActivePage } from "$lib/api/commands";
+	import { addPage, exitFolder, getActivePage, getSelectedProfile, movePage, removePage, setActivePage } from "$lib/api/commands";
 	import { onFolderClosed, onFolderOpened, onPageChanged } from "$lib/api/events";
 	import { computeGridRowLengths, dropMoveInstance, dropNewAction, flatIndexFromRowCol, pasteItem, rowColFromFlatIndex } from "$lib/services/deviceService";
 	import { notifyError } from "$lib/notifications";
@@ -142,18 +142,29 @@
 
 	async function handleAddPage() {
 		try {
-			const newCount = await addPage(device.id);
-			profile = { ...profile, num_pages: newCount };
+			await addPage(device.id);
+			profile = await getSelectedProfile(device.id);
 		} catch (error: any) {
 			notifyError(error);
 		}
 	}
 
-	async function handleRemoveLastPage() {
+	async function handleRemovePage(page: number) {
 		try {
-			const newCount = await removeLastPage(device.id);
-			profile = { ...profile, num_pages: newCount };
-			if (activePage >= newCount) activePage = newCount - 1;
+			await removePage(device.id, page);
+			profile = await getSelectedProfile(device.id);
+			activePage = await getActivePage(device.id);
+		} catch (error: any) {
+			notifyError(error);
+		}
+	}
+
+	async function handleMovePage(from: number, to: number) {
+		if (to < 0 || to >= (profile.num_pages ?? 1) || from === to) return;
+		try {
+			await movePage(device.id, from, to);
+			profile = await getSelectedProfile(device.id);
+			activePage = await getActivePage(device.id);
 		} catch (error: any) {
 			notifyError(error);
 		}
@@ -343,9 +354,25 @@
 			{#if (profile.num_pages ?? 1) > 1}
 				<button
 					class="w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
-					aria-label={t("deviceView.removeLastPage")}
-					title={t("deviceView.removeLastPage")}
-					onclick={handleRemoveLastPage}
+					aria-label={t("deviceView.movePageLeft")}
+					title={t("deviceView.movePageLeft")}
+					onclick={() => handleMovePage(activePage, activePage - 1)}
+					disabled={activePage <= 0}
+				>←</button>
+				<button
+					class="w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
+					aria-label={t("deviceView.movePageRight")}
+					title={t("deviceView.movePageRight")}
+					onclick={() => handleMovePage(activePage, activePage + 1)}
+					disabled={activePage >= (profile.num_pages ?? 1) - 1}
+				>→</button>
+			{/if}
+			{#if (profile.num_pages ?? 1) > 1}
+				<button
+					class="w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
+					aria-label={t("deviceView.removeCurrentPage")}
+					title={t("deviceView.removeCurrentPage")}
+					onclick={() => handleRemovePage(activePage)}
 				>−</button>
 			{/if}
 		</div>

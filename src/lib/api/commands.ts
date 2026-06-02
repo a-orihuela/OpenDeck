@@ -60,11 +60,50 @@ export const addPage = (device: string) =>
 export const removeLastPage = (device: string) =>
 	invoke<number>("remove_last_page", { device });
 
+export const removePage = (device: string, page: number) =>
+	invoke<number>("remove_page", { device, page });
+
+export const movePage = (device: string, from: number, to: number) =>
+	invoke<number>("move_page", { device, from, to });
+
 export const enterFolder = (device: string, folderContext: string) =>
 	invoke<void>("enter_folder", { device, folderContext });
 
 export const exitFolder = (device: string) =>
 	invoke<void>("exit_folder", { device });
+
+// ── Sheet Templates ─────────────────────────────────────────────────────────
+
+export type SheetTemplateMeta = {
+	id: string;
+	name: string;
+	rows: number;
+	columns: number;
+	created_at: number;
+	updated_at: number;
+	preview_map: boolean[];
+};
+
+export const listSheetTemplates = () =>
+	invoke<SheetTemplateMeta[]>("list_sheet_templates");
+
+export const saveCurrentPageAsSheetTemplate = (device: string, name: string) =>
+	invoke<SheetTemplateMeta>("save_current_page_as_sheet_template", { device, name });
+
+export const deleteSheetTemplate = (id: string) =>
+	invoke<void>("delete_sheet_template", { id });
+
+export const renameSheetTemplate = (id: string, name: string) =>
+	invoke<SheetTemplateMeta>("rename_sheet_template", { id, name });
+
+export const duplicateSheetTemplate = (id: string) =>
+	invoke<SheetTemplateMeta>("duplicate_sheet_template", { id });
+
+export const applySheetTemplate = (device: string, templateId: string, page?: number) =>
+	invoke<void>("apply_sheet_template", { device, templateId, page });
+
+export const insertSheetTemplateAsNewPage = (device: string, templateId: string) =>
+	invoke<number>("insert_sheet_template_as_new_page", { device, templateId });
 
 // ── Instances ────────────────────────────────────────────────────────────────
 

@@ -2,18 +2,40 @@
 	import type { Action } from "$lib/bindings";
 
 	import MagnifyingGlass from "phosphor-svelte/lib/MagnifyingGlass";
+	import Copy from "phosphor-svelte/lib/Copy";
+	import FloppyDisk from "phosphor-svelte/lib/FloppyDisk";
+	import Pencil from "phosphor-svelte/lib/Pencil";
+	import Trash from "phosphor-svelte/lib/Trash";
 
 	import { ACTION_FOLDER, ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE, BUILTIN_PLUGIN } from "$lib/constants";
 	import { getWebserverUrl } from "$lib/ports";
 	import { _ } from "$lib/i18n";
 	import { appState } from "$lib/propertyInspector";
+	import { profileManager } from "$lib/singletons";
+	import { notifyError, notify } from "$lib/notifications";
+	import { get } from "svelte/store";
 	
 
+	import {
+		applySheetTemplate,
+		duplicateSheetTemplate,
+		deleteSheetTemplate,
+		insertSheetTemplateAsNewPage,
+		listSheetTemplates,
+		renameSheetTemplate,
+		saveCurrentPageAsSheetTemplate,
+		type SheetTemplateMeta,
+	} from "$lib/api/commands";
 	import { getCategories } from "$lib/api/commands";
 
 	
 
 	const FOLDER_FORBIDDEN_ACTIONS = new Set([ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE, ACTION_FOLDER]);
+	let templates: SheetTemplateMeta[] = $state([]);
+	let selectedTemplateId = $state("");
+	let newTemplateName = $state("");
+	let renamingTemplateId = $state<string | null>(null);
+	let renameTemplateName = $state("");
 
 	let categories: { [name: string]: { icon?: string | null; actions: Action[] } } = $state({});
 	export async function reload() {
@@ -22,6 +44,99 @@
 	reload();
 
 	let query = $state("");
+
+	async function reloadTemplates() {
+		try {
+			templates = await listSheetTemplates();
+			if (templates.length === 0) {
+				selectedTemplateId = "";
+			} else if (!templates.some((v) => v.id === selectedTemplateId)) {
+				selectedTemplateId = templates[0].id;
+			}
+		} catch (error: any) {
+			notifyError(error, "warning");
+		}
+	}
+	reloadTemplates();
+
+	async function saveCurrentPageTemplate() {
+		if (!appState.selectedDevice || !newTemplateName.trim()) return;
+		try {
+			await saveCurrentPageAsSheetTemplate(appState.selectedDevice, newTemplateName.trim());
+			newTemplateName = "";
+			await reloadTemplates();
+			notify(t("sheets.saved"), "info");
+		} catch (error: any) {
+			notifyError(error);
+		}
+	}
+
+	async function applyTemplateToCurrentPage() {
+		if (!appState.selectedDevice || !selectedTemplateId) return;
+		try {
+			await applySheetTemplate(appState.selectedDevice, selectedTemplateId);
+			if (appState.selectedProfile) {
+				await get(profileManager)?.setProfile(appState.selectedProfile);
+			}
+			notify(t("sheets.applied"), "info");
+		} catch (error: any) {
+			notifyError(error);
+		}
+	}
+
+	async function insertTemplateAsPage() {
+		if (!appState.selectedDevice || !selectedTemplateId) return;
+		try {
+			await insertSheetTemplateAsNewPage(appState.selectedDevice, selectedTemplateId);
+			if (appState.selectedProfile) {
+				await get(profileManager)?.setProfile(appState.selectedProfile);
+			}
+			notify(t("sheets.inserted"), "info");
+		} catch (error: any) {
+			notifyError(error);
+		}
+	}
+
+	async function removeTemplate(id: string) {
+		if (!id) return;
+		try {
+			await deleteSheetTemplate(id);
+			await reloadTemplates();
+		} catch (error: any) {
+			notifyError(error);
+		}
+	}
+
+	async function duplicateTemplate(id: string) {
+		if (!id) return;
+		try {
+			const created = await duplicateSheetTemplate(id);
+			await reloadTemplates();
+			selectedTemplateId = created.id;
+			notify(t("sheets.duplicated"), "info");
+		} catch (error: any) {
+			notifyError(error);
+		}
+	}
+
+	function startRenameTemplate(template: SheetTemplateMeta) {
+		renamingTemplateId = template.id;
+		renameTemplateName = template.name;
+	}
+
+	async function saveRenameTemplate(id: string) {
+		if (!renameTemplateName.trim()) return;
+		try {
+			const renamed = await renameSheetTemplate(id, renameTemplateName.trim());
+			renamingTemplateId = null;
+			renameTemplateName = "";
+			await reloadTemplates();
+			selectedTemplateId = renamed.id;
+			notify(t("sheets.renamed"), "info");
+		} catch (error: any) {
+			notifyError(error);
+		}
+	}
 
 	const filteredCategories = $derived.by(() => {
 		const lowerCaseQuery = query.toLowerCase().trim();
@@ -126,6 +241,79 @@
 
 	<span id="action-list-hint" class="sr-only">{$_("actions.keyboardHint")}</span>
 	<div class="grow overflow-auto select-none divide-y divide-neutral-800!">
+		<details open>
+			<summary class="pl-4 py-3 text-lg font-semibold text-neutral-300 hover:bg-neutral-800 transition-colors cursor-pointer">
+				{t("sheets.title")}
+			</summary>
+			<div class="px-3 pb-3 space-y-2">
+				<input
+					bind:value={newTemplateName}
+					class="w-full p-2 text-sm text-neutral-300 bg-neutral-700 border border-neutral-600 rounded-lg"
+					placeholder={t("sheets.namePlaceholder")}
+					aria-label={t("sheets.namePlaceholder")}
+				/>
+				<button
+					class="w-full p-2 text-sm text-neutral-300 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-lg"
+					onclick={saveCurrentPageTemplate}
+					disabled={!appState.selectedDevice || !newTemplateName.trim()}
+				>
+					{t("sheets.saveCurrent")}
+				</button>
+				<div class="max-h-52 overflow-auto space-y-2" role="list" aria-label={t("sheets.choose")}>
+					{#if templates.length === 0}
+						<p class="text-xs text-neutral-400">{t("sheets.empty")}</p>
+					{:else}
+						{#each templates as template}
+							<div class={`p-2 rounded-lg border border-neutral-700 ${selectedTemplateId === template.id ? "bg-neutral-800/70" : ""}`}>
+								<button
+									class="w-full text-left"
+									onclick={() => { selectedTemplateId = template.id; }}
+									aria-label={template.name}
+								>
+									<p class="text-sm text-neutral-200 truncate">{template.name}</p>
+									<p class="text-[11px] text-neutral-400">{template.rows}x{template.columns}</p>
+								</button>
+								{#if renamingTemplateId === template.id}
+									<div class="flex items-center gap-1 mt-2">
+										<input
+											bind:value={renameTemplateName}
+											class="grow p-1 text-xs text-neutral-300 bg-neutral-700 border border-neutral-600 rounded"
+											aria-label={t("sheets.rename")}
+											onkeydown={(e) => { if (e.key === "Enter") saveRenameTemplate(template.id); }}
+										/>
+										<button class="p-1" onclick={() => saveRenameTemplate(template.id)} aria-label={t("common.save")}><FloppyDisk size={14} class="text-green-400" /></button>
+										<button class="p-1" onclick={() => { renamingTemplateId = null; }} aria-label={t("common.close")}>✕</button>
+									</div>
+								{:else}
+									<div class="flex items-center gap-2 mt-2">
+										<button class="p-1" onclick={() => duplicateTemplate(template.id)} aria-label={t("sheets.duplicate")}><Copy size={14} class="text-neutral-300" /></button>
+										<button class="p-1" onclick={() => startRenameTemplate(template)} aria-label={t("sheets.rename")}><Pencil size={14} class="text-neutral-300" /></button>
+										<button class="p-1 ml-auto" onclick={() => removeTemplate(template.id)} aria-label={t("sheets.delete")}><Trash size={14} class="text-red-300" /></button>
+									</div>
+								{/if}
+							</div>
+						{/each}
+					{/if}
+				</div>
+				<div class="grid grid-cols-2 gap-2">
+					<button
+						class="p-2 text-xs text-neutral-300 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-lg"
+						onclick={applyTemplateToCurrentPage}
+						disabled={!appState.selectedDevice || !selectedTemplateId}
+					>
+						{t("sheets.applyCurrent")}
+					</button>
+					<button
+						class="p-2 text-xs text-neutral-300 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-lg"
+						onclick={insertTemplateAsPage}
+						disabled={!appState.selectedDevice || !selectedTemplateId}
+					>
+						{t("sheets.insertAsNewPage")}
+					</button>
+				</div>
+			</div>
+		</details>
+
 		{#each filteredCategories as [name, { icon, actions }]}
 			<details open>
 				<summary class="pl-4 py-3 text-lg font-semibold text-neutral-300 hover:bg-neutral-800 transition-colors cursor-pointer">

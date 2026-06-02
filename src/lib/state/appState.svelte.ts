@@ -26,6 +26,8 @@ class AppStateClass {
 	copiedItem = $state<CopiedItem | null>(null);
 	notifications = $state<Notification[]>([]);
 	inFolderMode = $state(false);
+	selectedDevice = $state<string | null>(null);
+	selectedProfile = $state<string | null>(null);
 }
 
 export const appState = new AppStateClass();
@@ -53,6 +55,12 @@ function localizeErrorMessage(raw: string): string {
 	if (!clean || clean === "[object Object]") return get(_)("errors.generic");
 
 	const value = clean.toLowerCase();
+	if (clean.includes("SHEETS_TEMPLATE_NAME_EMPTY")) return get(_)("errors.sheetTemplateNameEmpty");
+	if (clean.includes("SHEETS_TEMPLATE_NAME_EXISTS")) return get(_)("errors.sheetTemplateNameExists");
+	if (clean.includes("SHEETS_TEMPLATE_NOT_FOUND")) return get(_)("errors.sheetTemplateNotFound");
+	if (clean.includes("SHEETS_TEMPLATE_LAYOUT_INCOMPATIBLE")) return get(_)("errors.sheetTemplateLayoutIncompatible");
+	if (value.includes("page index out of bounds") || clean.includes("PAGES_INDEX_OUT_OF_BOUNDS")) return get(_)("errors.pageIndexOutOfBounds");
+	if (value.includes("profile must have at least one page")) return get(_)("errors.profileMustHaveAtLeastOnePage");
 	if (value.includes("github_api_error")) return get(_)("errors.network");
 	if (value.includes("permission denied")) return get(_)("errors.permissionDenied");
 	if (value.includes("no such file") || value.includes("not found")) return get(_)("errors.notFound");
