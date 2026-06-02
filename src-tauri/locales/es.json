@@ -1,9 +1,4 @@
 {
-  "omegadeck.multiaction": { "Name": "Acción múltiple", "Tooltip": "Ejecuta varias acciones" },
-  "omegadeck.toggleaction": { "Name": "Acción de alternancia", "Tooltip": "Alterna entre varias acciones" },
-  "omegadeck.nextpage": { "Name": "Página siguiente", "Tooltip": "Ir a la página siguiente" },
-  "omegadeck.previouspage": { "Name": "Página anterior", "Tooltip": "Ir a la página anterior" },
-  "omegadeck.folder": { "Name": "Carpeta", "Tooltip": "Abrir una carpeta de acciones" },
   "omegadeck.builtin.multiaction": { "Name": "Acción múltiple", "Tooltip": "Ejecuta varias acciones" },
   "omegadeck.builtin.toggleaction": { "Name": "Acción de alternancia", "Tooltip": "Alterna entre varias acciones" },
   "omegadeck.builtin.nextpage": { "Name": "Página siguiente", "Tooltip": "Ir a la página siguiente" },
