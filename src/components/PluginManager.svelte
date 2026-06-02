@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ArrowClockwise from "phosphor-svelte/lib/ArrowClockwise";
+	import ArrowLeft from "phosphor-svelte/lib/ArrowLeft";
 	import ArrowSquareOut from "phosphor-svelte/lib/ArrowSquareOut";
 	import CloudArrowDown from "phosphor-svelte/lib/CloudArrowDown";
 	import FileArrowUp from "phosphor-svelte/lib/FileArrowUp";
@@ -32,11 +33,21 @@
 	import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 	import { ask, message, open } from "@tauri-apps/plugin-dialog";
 
+	let {
+		fullPage = false,
+		onOpen,
+		onBack = () => {},
+	}: {
+		fullPage?: boolean;
+		onOpen?: (() => void) | undefined;
+		onBack?: () => void;
+	} = $props();
+
 	let showPopup = $state(false);
 
 	$effect(() => {
 		const interval = setInterval(async () => {
-			if (showPopup) installed = await listPlugins();
+			if (showPopup || fullPage) installed = await listPlugins();
 		}, 1e3);
 		return () => clearInterval(interval);
 	});
@@ -142,7 +153,7 @@
 	let checkedPlugins = $state(new Set<string>());
 
 	$effect(() => {
-		if (showPopup) {
+		if (showPopup || fullPage) {
 			for (const plugin of installed) {
 				if (!untrack(() => checkedPlugins.has(plugin.id))) {
 					untrack(() => {
@@ -181,47 +192,49 @@
 	});
 </script>
 
-<button
-	class="px-3 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
-	onclick={() => { showPopup = true; }}
->
-	Plugins
-</button>
+{#if !fullPage}
+	<button
+		class="px-3 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
+		onclick={() => {
+			if (onOpen) onOpen();
+			else showPopup = true;
+		}}
+	>
+		Plugins
+	</button>
+{/if}
 
 <svelte:window
 	onkeydown={(event) => {
 		if (event.key == "Escape") {
 			if (choices) cancelChoice();
 			else if (openDetailsView) openDetailsView = null;
+			else if (fullPage) onBack();
 			else showPopup = false;
 		}
 	}}
 />
 
-<Popup show={showPopup} label="Manage plugins">
-	{#snippet children()}
-	<button class="mr-2 my-1 float-right text-xl text-neutral-300" onclick={() => { showPopup = false; }} aria-label="Close">✕</button>
-	<h2 class="m-2 font-semibold text-xl text-neutral-300">Manage plugins</h2>
-
-	{#if installProgress}
-		<div class="mx-2 mt-4">
-			<p class="text-sm text-neutral-400 mb-1">
-				{#if installProgress.total}
-					Downloading… {Math.round(installProgress.downloaded / 1024)}&#8239;KB / {Math.round(installProgress.total / 1024)}&#8239;KB
-				{:else}
-					Downloading… {Math.round(installProgress.downloaded / 1024)}&#8239;KB
-				{/if}
-			</p>
-			<div class="w-full bg-neutral-700 rounded-full h-2">
-				<div
-					class="bg-blue-500 h-2 rounded-full transition-all"
-					style="width: {installProgress.total ? Math.round((installProgress.downloaded / installProgress.total) * 100) : 100}%"
-				></div>
+	{#snippet pluginContent()}
+		{#if installProgress}
+			<div class="mx-2 mt-4">
+				<p class="text-sm text-neutral-400 mb-1">
+					{#if installProgress.total}
+						Downloading… {Math.round(installProgress.downloaded / 1024)}&#8239;KB / {Math.round(installProgress.total / 1024)}&#8239;KB
+					{:else}
+						Downloading… {Math.round(installProgress.downloaded / 1024)}&#8239;KB
+					{/if}
+				</p>
+				<div class="w-full bg-neutral-700 rounded-full h-2">
+					<div
+						class="bg-blue-500 h-2 rounded-full transition-all"
+						style="width: {installProgress.total ? Math.round((installProgress.downloaded / installProgress.total) * 100) : 100}%"
+					></div>
+				</div>
 			</div>
-		</div>
-	{/if}
+		{/if}
 
-	<h2 class="mx-2 mt-6 mb-2 text-lg text-neutral-400">Installed plugins</h2>
+		<h2 class="mx-2 mt-6 mb-2 text-lg text-neutral-400">Installed plugins</h2>
 	<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 		<!-- deno-fmt-ignore -->
 		{#each installed.sort((a, b) =>
@@ -401,8 +414,33 @@
 			</ListedPlugin>
 		</div>
 	{/if}
-	{/snippet}
-</Popup>
+{/snippet}
+
+{#if fullPage}
+	<div class="flex flex-col h-full min-h-0">
+		<div class="flex items-center gap-2 px-3 py-2 border-b border-neutral-700 shrink-0">
+			<button
+				class="p-1 text-neutral-300 hover:text-white hover:bg-neutral-700 rounded-md transition-colors"
+				onclick={() => onBack()}
+				aria-label="Back"
+			>
+				<ArrowLeft size="18" />
+			</button>
+			<h2 class="text-lg font-semibold text-neutral-300">Plugins</h2>
+		</div>
+		<div class="grow min-h-0 overflow-auto pb-6">
+			{@render pluginContent()}
+		</div>
+	</div>
+{:else}
+	<Popup show={showPopup} label="Manage plugins">
+		{#snippet children()}
+			<button class="mr-2 my-1 float-right text-xl text-neutral-300" onclick={() => { showPopup = false; }} aria-label="Close">✕</button>
+			<h2 class="m-2 font-semibold text-xl text-neutral-300">Manage plugins</h2>
+			{@render pluginContent()}
+		{/snippet}
+	</Popup>
+{/if}
 
 {#if openDetailsView && plugins?.[openDetailsView]}
 	<PluginDetails

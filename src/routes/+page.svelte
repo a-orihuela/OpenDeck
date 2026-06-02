@@ -15,9 +15,12 @@
 	import PropertyInspectorView from "../components/PropertyInspectorView.svelte";
 	import SettingsView from "../components/SettingsView.svelte";
 
+	type MainView = "main" | "plugins" | "settings";
+
 	let devices = $state<{ [id: string]: DeviceInfo }>({});
 	let selectedDevice = $state("");
 	let selectedProfiles = $state<{ [id: string]: Profile }>({});
+	let mainView = $state<MainView>("main");
 
 	let actionListRef: ActionList | null = $state(null);
 	let deviceSelectorRef: DeviceSelector | null = $state(null);
@@ -32,41 +35,54 @@
 
 <svelte:window ondragover={(event) => event.preventDefault()} ondrop={(event) => event.preventDefault()} />
 
-<div class="flex flex-row h-screen">
-	<!-- Left sidebar: ActionList -->
-	<ActionList bind:this={actionListRef} />
+{#if mainView === "plugins"}
+	<div class="h-screen w-full overflow-hidden">
+		<PluginManager fullPage onBack={() => { mainView = "main"; }} />
+	</div>
+{:else if mainView === "settings"}
+	<div class="h-screen w-full overflow-hidden">
+		<SettingsView fullPage onBack={() => { mainView = "main"; }} />
+	</div>
+{:else}
+	<div class="flex flex-row h-screen">
+		<!-- Left sidebar: ActionList -->
+		<ActionList bind:this={actionListRef} />
 
-	<!-- Main column -->
-	<div class="flex flex-col grow min-w-0">
+		<!-- Main column -->
+		<div class="flex flex-col grow min-w-0">
 
-		<!-- Navbar -->
-		<nav class="flex flex-row items-center px-3 py-2 border-b border-neutral-700 shrink-0">
-			<DeviceSelector
-				bind:devices
-				bind:value={selectedDevice}
-				bind:selectedProfiles
-				bind:this={deviceSelectorRef}
-			/>
-			{#key selectedDevice}
-				{#if selectedDevice && devices[selectedDevice]}
-					<div class="ml-4">
-						<ProfileManager
-							bind:device={devices[selectedDevice]}
-							bind:profile={selectedProfiles[selectedDevice]}
-							bind:this={profileManagerRef}
-						/>
-					</div>
-				{/if}
-			{/key}
-			<div class="ml-auto flex flex-row items-center gap-2">
-				<PluginManager />
-				<SettingsView />
-			</div>
-		</nav>
+			<!-- Navbar -->
+			<nav class="flex flex-row items-center px-3 py-2 border-b border-neutral-700 shrink-0">
+				<DeviceSelector
+					bind:devices
+					bind:value={selectedDevice}
+					bind:selectedProfiles
+					bind:this={deviceSelectorRef}
+				/>
+				{#key selectedDevice}
+					{#if selectedDevice && devices[selectedDevice]}
+						<div class="ml-4">
+							<ProfileManager
+								bind:device={devices[selectedDevice]}
+								bind:profile={selectedProfiles[selectedDevice]}
+								bind:this={profileManagerRef}
+							/>
+						</div>
+					{/if}
+				{/key}
+				<div class="ml-auto flex flex-row items-center gap-2">
+					<PluginManager
+						onOpen={() => { mainView = "plugins"; }}
+					/>
+					<SettingsView
+						onOpen={() => { mainView = "settings"; }}
+					/>
+				</div>
+			</nav>
 
-		<!-- Content area -->
-		{#if Object.keys(devices).length > 0 && selectedProfiles}
-			<div class="flex flex-col grow overflow-hidden">
+			<!-- Content area -->
+			{#if Object.keys(devices).length > 0 && selectedProfiles}
+				<div class="flex flex-col grow overflow-hidden">
 
 				<!-- Device panel -->
 				<div class="overflow-auto flex-1 min-h-0">
@@ -88,9 +104,10 @@
 					</div>
 				{/if}
 			</div>
-		{:else}
-			<NoDevicesDetected />
-		{/if}
+			{:else}
+				<NoDevicesDetected />
+			{/if}
 
+		</div>
 	</div>
-</div>
+{/if}
