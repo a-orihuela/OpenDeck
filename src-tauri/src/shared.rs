@@ -349,15 +349,27 @@ pub struct Profile {
 	pub num_pages: u8,
 }
 
-fn builtin_action_locale(uuid: &str) -> (&'static str, &'static str) {
+fn builtin_action_locale(uuid: &str) -> (String, String) {
 	static BUILTIN_LOCALE_EN: LazyLock<serde_json::Value> = LazyLock::new(|| {
 		serde_json::from_str(include_str!("../locales/en.json")).expect("valid builtin locale file")
 	});
 
-	let action = BUILTIN_LOCALE_EN.get(uuid).unwrap_or_else(|| panic!("missing builtin locale entry for {uuid}"));
+	let fallback_key = uuid
+		.strip_prefix("omegadeck.")
+		.map(|suffix| format!("omegadeck.builtin.{suffix}"));
+
+	let action = BUILTIN_LOCALE_EN
+		.get(uuid)
+		.or_else(|| fallback_key.as_ref().and_then(|key| BUILTIN_LOCALE_EN.get(key)));
+
+	let Some(action) = action else {
+		log::warn!("missing builtin locale entry for {uuid}; using UUID fallback text");
+		return (uuid.to_owned(), String::new());
+	};
+
 	(
-		action.get("Name").and_then(serde_json::Value::as_str).unwrap_or_default(),
-		action.get("Tooltip").and_then(serde_json::Value::as_str).unwrap_or_default(),
+		action.get("Name").and_then(serde_json::Value::as_str).unwrap_or_default().to_owned(),
+		action.get("Tooltip").and_then(serde_json::Value::as_str).unwrap_or_default().to_owned(),
 	)
 }
 
