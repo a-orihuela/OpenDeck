@@ -35,7 +35,7 @@ export async function fetchLatestGitHubRelease(repoUrl: string): Promise<any> {
 	endpoint.hostname = "api." + endpoint.hostname;
 	endpoint.pathname = "/repos" + endpoint.pathname + "/releases/latest";
 	const res = await _fetch(endpoint.toString());
-	if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+	if (!res.ok) throw new Error(`github_api_error:${res.status}`);
 	return res.json();
 }
 

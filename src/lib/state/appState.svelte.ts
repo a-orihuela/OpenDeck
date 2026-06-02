@@ -53,6 +53,7 @@ function localizeErrorMessage(raw: string): string {
 	if (!clean || clean === "[object Object]") return get(_)("errors.generic");
 
 	const value = clean.toLowerCase();
+	if (value.includes("github_api_error")) return get(_)("errors.network");
 	if (value.includes("permission denied")) return get(_)("errors.permissionDenied");
 	if (value.includes("no such file") || value.includes("not found")) return get(_)("errors.notFound");
 	if (value.includes("timeout") || value.includes("timed out")) return get(_)("errors.timeout");
