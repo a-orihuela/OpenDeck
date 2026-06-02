@@ -2,6 +2,7 @@
 	import type { DeviceInfo, Profile } from "$lib/bindings";
 
 	import { profileManager } from "$lib/singletons";
+	import { _ } from "$lib/i18n";
 	import { get } from "svelte/store";
 	import { untrack } from "svelte";
 
@@ -19,6 +20,8 @@
 	let buildInfo = $state("");
 	let measure: HTMLSpanElement | undefined = $state(undefined);
 	let selectWidth = $state(0);
+	const translate = $derived($_);
+	const t = (key: string, values?: Record<string, unknown>) => translate(key, { values });
 
 	$effect(() => {
 		const keys = Object.keys(devices).sort();
@@ -83,8 +86,8 @@
 {#if Object.keys(devices).length > 0}
 	<div class="select-device-wrapper">
 		<span bind:this={measure} class="invisible fixed whitespace-pre pointer-events-none text-xl font-semibold" aria-hidden="true"></span>
-		<select bind:value style:width="{selectWidth}px" aria-label="Device">
-			<option value="" disabled selected>Choose a device...</option>
+		<select bind:value style:width="{selectWidth}px" aria-label={t("deviceSelector.deviceAria")}>
+			<option value="" disabled selected>{t("deviceSelector.chooseDevice")}</option>
 
 			{#each Object.entries(devices).sort() as [id, device]}
 				<option value={id}>{device.name}</option>

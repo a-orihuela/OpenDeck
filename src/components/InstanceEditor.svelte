@@ -2,6 +2,7 @@
 	import type { ActionInstance } from "$lib/bindings";
 
 	import { renderImage, resizeImage } from "$lib/rendererHelper";
+	import { _ } from "$lib/i18n";
 
 	import { getFonts, setState } from "$lib/api/commands";
 
@@ -23,6 +24,9 @@
 	let fileInput: HTMLInputElement | undefined = $state(undefined);
 	let solidColourInput: HTMLInputElement | undefined = $state(undefined);
 	let backgroundColourInput: HTMLInputElement | undefined = $state(undefined);
+
+	const translate = $derived($_);
+	const t = (key: string, values?: Record<string, unknown>) => translate(key, { values });
 
 	function adjustImageScale(delta: number) {
 		const next = (instance.states[stateIndex].image_scale || 100) + delta;
@@ -63,13 +67,13 @@
 <div class={`p-2 text-neutral-300 bg-neutral-700 border border-neutral-600 rounded-lg ${inline ? "" : "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10"}`}>
 	<div class="flex flex-row">
 		<div class="select-wrapper m-1 w-full">
-			<select class="w-full bg-neutral-600! border-neutral-500!" bind:value={stateIndex} aria-label="State">
+			<select class="w-full bg-neutral-600! border-neutral-500!" bind:value={stateIndex} aria-label={t("instanceEditor.stateAria")}>
 				{#each instance.states as _, i}
-					<option value={i}>State {i + 1}</option>
+					<option value={i}>{t("instanceEditor.stateOption", { index: i + 1 })}</option>
 				{/each}
 			</select>
 		</div>
-		<button class="ml-2 mr-1 float-right text-xl text-neutral-300" onclick={() => showEditor = false} aria-label="Close">✕</button>
+		<button class="ml-2 mr-1 float-right text-xl text-neutral-300" onclick={() => showEditor = false} aria-label={t("instanceEditor.closeAria")}>✕</button>
 	</div>
 	<div class="flex flex-row mx-1">
 		<div class="flex flex-col justify-center items-center mt-2 mb-1">
@@ -90,8 +94,8 @@
 						? instance.action.icon
 						: (defaultImage ?? instance.action.icon);
 				}}
-				title="Click to select an image, or right-click to reset to the default image."
-				aria-label="Click to select an image, or right-click to reset to the default image."
+				title={t("instanceEditor.imageSelectHint")}
+				aria-label={t("instanceEditor.imageSelectHint")}
 			>
 				{#await renderImage(null, null, instance.states[stateIndex], instance.action.states[stateIndex]?.image ?? instance.action.icon, false, false, true, false, false, 0, true)}
 					<div class="w-32 min-w-32 h-32 bg-neutral-800 animate-pulse border border-neutral-600 rounded-xl"></div>
@@ -99,7 +103,7 @@
 					<img
 						src={resolvedSrc}
 						class="my-auto w-32 min-w-32 h-min aspect-square bg-black border border-neutral-600 rounded-xl cursor-pointer"
-						alt="State {stateIndex + 1} image"
+						alt={t("instanceEditor.imageAlt", { index: stateIndex + 1 })}
 					/>
 				{/await}
 			</button>
@@ -107,8 +111,8 @@
 				<button
 					onclick={() => adjustImageScale(-10)}
 					class="w-6 h-6 text-sm bg-neutral-600 hover:bg-neutral-500 transition-colors border border-neutral-500 rounded-md"
-					title="Decrease image scale"
-					aria-label="Decrease image scale"
+					title={t("instanceEditor.scaleDown")}
+					aria-label={t("instanceEditor.scaleDown")}
 				>
 					-
 				</button>
@@ -118,8 +122,8 @@
 				<button
 					onclick={() => adjustImageScale(10)}
 					class="w-6 h-6 text-sm bg-neutral-600 hover:bg-neutral-500 transition-colors border border-neutral-500 rounded-md"
-					title="Increase image scale"
-					aria-label="Increase image scale"
+					title={t("instanceEditor.scaleUp")}
+					aria-label={t("instanceEditor.scaleUp")}
 				>
 					+
 				</button>
@@ -140,7 +144,7 @@
 				}}
 				class="mt-1 px-0.5 text-sm text-neutral-300 bg-neutral-600 hover:bg-neutral-500 transition-colors border border-neutral-500 rounded-lg"
 			>
-				Set background
+				{t("instanceEditor.setBackground")}
 				<input
 					bind:this={backgroundColourInput}
 					type="color"
@@ -164,7 +168,7 @@
 				}}
 				class="mt-1 px-0.5 text-sm text-neutral-300 bg-neutral-600 hover:bg-neutral-500 transition-colors border border-neutral-500 rounded-lg"
 			>
-				Use solid colour
+				{t("instanceEditor.useSolidColor")}
 				<input
 					bind:this={solidColourInput}
 					type="color"
@@ -206,7 +210,7 @@
 
 		<div class="flex flex-col justify-center pl-4 pr-2 pt-4 pb-2 space-y-2">
 			<div class="flex flex-row items-center space-x-2">
-				<label for="editor-text">Text</label>
+				<label for="editor-text">{t("instanceEditor.text")}</label>
 				<textarea
 					bind:value={instance.states[stateIndex].text}
 					placeholder={instance.action.states[stateIndex]?.text || instance.action.name}
@@ -216,14 +220,14 @@
 				></textarea>
 			</div>
 			<div class="flex flex-row items-center">
-				<label for="editor-colour" class="mr-2">Colour</label>
+				<label for="editor-colour" class="mr-2">{t("instanceEditor.colour")}</label>
 				<input
 					type="color"
 					bind:value={instance.states[stateIndex].colour}
 					class="mr-2 px-0.5 bg-neutral-600 border border-neutral-500 rounded-lg"
 					id="editor-colour"
 				/>
-				<label for="editor-show" class="mr-2">Show</label>
+				<label for="editor-show" class="mr-2">{t("instanceEditor.show")}</label>
 				<input
 					type="checkbox"
 					bind:checked={instance.states[stateIndex].show}
@@ -233,22 +237,22 @@
 				<select
 					bind:value={instance.states[stateIndex].alignment}
 					class="px-1! py-0.5!"
-					aria-label="Alignment"
+					aria-label={t("instanceEditor.alignmentAria")}
 				>
-					<option value="top">Top</option>
-					<option value="middle">Middle</option>
-					<option value="bottom">Bottom</option>
+					<option value="top">{t("instanceEditor.alignmentTop")}</option>
+					<option value="middle">{t("instanceEditor.alignmentMiddle")}</option>
+					<option value="bottom">{t("instanceEditor.alignmentBottom")}</option>
 				</select>
 			</div>
 			<div class="flex flex-row items-center">
-				<label for="editor-stroke" class="mr-2">Stroke</label>
+				<label for="editor-stroke" class="mr-2">{t("instanceEditor.stroke")}</label>
 				<input
 					type="color"
 					bind:value={instance.states[stateIndex].stroke_colour}
 					class="mr-2 px-0.5 bg-neutral-600 border border-neutral-500 rounded-lg"
 					id="editor-stroke"
 				/>
-				<label for="editor-outline" class="mr-2">Outline</label>
+				<label for="editor-outline" class="mr-2">{t("instanceEditor.outline")}</label>
 				<input
 					type="number"
 					bind:value={instance.states[stateIndex].stroke_size}
@@ -257,11 +261,11 @@
 				/>
 			</div>
 			<div class="flex flex-row items-center">
-				<label for="editor-font" class="mr-2">Font</label>
+				<label for="editor-font" class="mr-2">{t("instanceEditor.font")}</label>
 				<input
 					list="families"
 					bind:value={instance.states[stateIndex].family}
-					placeholder="Font family"
+					placeholder={t("instanceEditor.fontFamilyPlaceholder")}
 					class="w-full px-1 text-neutral-300 bg-neutral-600 border border-neutral-500 rounded-lg"
 					id="editor-font"
 				/>
@@ -282,7 +286,7 @@
 				</datalist>
 			</div>
 			<div class="flex flex-row items-center">
-				<label for="editor-bold" class="mr-3 font-bold">B</label>
+				<label for="editor-bold" class="mr-3 font-bold" title={t("instanceEditor.bold")}>B</label>
 				<input
 					type="checkbox"
 					bind:checked={bold}
@@ -290,7 +294,7 @@
 					class="mr-4 mt-1 scale-125"
 					id="editor-bold"
 				/>
-				<label for="editor-italic" class="mr-3 italic">I</label>
+				<label for="editor-italic" class="mr-3 italic" title={t("instanceEditor.italic")}>I</label>
 				<input
 					type="checkbox"
 					bind:checked={italic}
@@ -298,14 +302,14 @@
 					class="mr-4 mt-1 scale-125"
 					id="editor-italic"
 				/>
-				<label for="editor-underline" class="mr-3 underline">U</label>
+				<label for="editor-underline" class="mr-3 underline" title={t("instanceEditor.underline")}>U</label>
 				<input
 					type="checkbox"
 					bind:checked={instance.states[stateIndex].underline}
 					class="mr-4 mt-1 scale-125"
 					id="editor-underline"
 				/>
-				<label for="editor-size" class="mr-2">Size</label>
+				<label for="editor-size" class="mr-2">{t("instanceEditor.size")}</label>
 				<input
 					type="number"
 					bind:value={instance.states[stateIndex].size}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ActionInstance, DeviceInfo, Profile } from "$lib/bindings";
 	import BuiltinActionInspector from "./BuiltinActionInspector.svelte";
+import { _ } from "$lib/i18n";
 
 	import { BUILTIN_PLUGIN, WS_PI_SUFFIX } from "$lib/constants";
 	import { getWebserverUrl, getWebSocketPort } from "$lib/ports";
@@ -15,6 +16,8 @@
 	let iframeContainer: HTMLDivElement | undefined = $state(undefined);
 	let iframeClosePopup: HTMLButtonElement | undefined = $state(undefined);
 	let iframePopupsOpen: string[] = $state([]);
+	const translate = $derived($_);
+	const t = (key: string, values?: Record<string, unknown>) => translate(key, { values });
 
 	async function iframeOnLoad(instance: ActionInstance) {
 		const iframe = iframes[instance.context];
@@ -192,13 +195,14 @@
 		bind:this={iframeClosePopup}
 		onclick={() => closePopup(iframePopupsOpen[iframePopupsOpen.length - 1])}
 		class="absolute top-2 right-2 text-2xl text-neutral-300 font-bold hidden"
+		aria-label={t("common.close")}
 	>
 		✕
 	</button>
 	{#each instances as instance (instance.context)}
 		{#if instance.action.property_inspector}
 			<iframe
-				title="Property inspector"
+				title={t("propertyInspector.title")}
 				class="w-full h-full hidden"
 				class:block!={appState.inspectedInstance == instance.context}
 				src={getWebserverUrl(instance.action.property_inspector + WS_PI_SUFFIX)}

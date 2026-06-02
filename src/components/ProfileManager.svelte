@@ -29,7 +29,9 @@
 		removeFolderEntry,
 		updateFoldersAfterRename,
 	} from "$lib/services/profileService";
+	import { _ } from "$lib/i18n";
 	import { message } from "@tauri-apps/plugin-dialog";
+	import { get } from "svelte/store";
 	import { untrack } from "svelte";
 
 	let { device = $bindable(), profile = $bindable() }: { device: DeviceInfo; profile: Profile } = $props();
@@ -37,6 +39,8 @@
 	let folders: { [name: string]: string[] } = $state({});
 	let value = $state("");
 	let oldValue = $state("");
+
+	const t = (key: string, values?: Record<string, unknown>) => get(_)(key, { values });
 
 	async function getProfiles(dev: DeviceInfo) {
 		try {
@@ -112,14 +116,14 @@
 		if (newId == oldId) { renamingProfile = null; return; }
 
 		if (flatProfileList(folders).includes(newId)) {
-			message(`A profile with the ID "${newId}" already exists.`, { title: "Failed to rename profile" });
+			message(t("profiles.dialogs.duplicateId", { id: newId }), { title: t("profiles.dialogs.renameFailed") });
 			return;
 		}
 
 		try {
 			await apiRenameProfile(device.id, oldId, newId, false);
 		} catch (error: any) {
-			message(error, { title: "Failed to rename profile" });
+			message(error, { title: t("profiles.dialogs.renameFailed") });
 			console.error(error);
 			return;
 		}
@@ -207,9 +211,9 @@
 
 <div class="select-profile-wrapper">
 	<span bind:this={measure} class="invisible fixed whitespace-pre pointer-events-none" aria-hidden="true"></span>
-	<select bind:value style:width="{selectWidth}px" aria-label="Profile">
+	<select bind:value style:width="{selectWidth}px" aria-label={$_("profiles.aria.profile")}>
 		{#if flatProfileList(folders).length === 0}
-			<option value="Default">Default</option>
+			<option value="Default">{$_("profiles.defaultProfile")}</option>
 		{/if}
 		{#each Object.entries(folders).sort() as [id, profiles]}
 			{#if id && profiles.length}
@@ -224,7 +228,7 @@
 				{/each}
 			{/if}
 		{/each}
-		<option value="omegadeck_edit_profiles">Edit...</option>
+		<option value="omegadeck_edit_profiles">{$_("profiles.editOption")}</option>
 	</select>
 </div>
 
@@ -238,9 +242,9 @@
 	}}
 />
 
-<Popup show={showPopup} label={device.name + " profiles"}>
+<Popup show={showPopup} label={$_("profiles.title", { values: { device: device.name } })}>
 	{#snippet children()}
-	<button class="mr-1 float-right text-xl text-neutral-300" onclick={() => { showPopup = false; }} aria-label="Close">✕</button>
+	<button class="mr-1 float-right text-xl text-neutral-300" onclick={() => { showPopup = false; }} aria-label={$_("common.close")}>✕</button>
 	<h2 class="text-xl font-semibold text-neutral-300">{device.name}</h2>
 
 	<div class="flex flex-row mt-2 mb-1">
@@ -248,8 +252,8 @@
 			bind:this={nameInput}
 			pattern="[a-zA-Z0-9_ ]+(\/[a-zA-Z0-9_ ]+)?"
 			class="grow p-2 text-neutral-300 invalid:text-red-400 bg-neutral-700 border-l border-y border-neutral-600 rounded-l-lg"
-			placeholder='Profile name or "folder/name"'
-			aria-label="Profile name"
+			placeholder={$_("profiles.namePlaceholder")}
+			aria-label={$_("profiles.nameAria")}
 		/>
 		<button
 			onclick={async () => {
@@ -261,12 +265,12 @@
 			}}
 			class="px-4 text-neutral-300 bg-neutral-900 hover:bg-neutral-800 transition-colors border-r border-y border-neutral-600 rounded-r-lg"
 		>
-			Create
+			{$_("common.create")}
 		</button>
 		<button
 			class="ml-2 px-4 flex items-center text-neutral-300 bg-neutral-900 hover:bg-neutral-800 transition-colors border border-neutral-600 rounded-lg"
 			onclick={() => { showApplicationManager = true; }}
-			aria-label="Application profiles"
+			aria-label={$_("profiles.aria.applicationProfiles")}
 		>
 			<Browsers size={24} />
 		</button>
@@ -286,24 +290,24 @@
 							bind:value={newId}
 							pattern="[a-zA-Z0-9_ ]+(\/[a-zA-Z0-9_ ]+)?"
 							class="grow px-2 py-1 text-neutral-300 invalid:text-red-400 bg-neutral-700 rounded"
-							placeholder='Profile name or "folder/name"'
+							placeholder={$_("profiles.namePlaceholder")}
 							onkeydown={(e) => {
 								if (e.key === "Enter") saveRenamedProfile(prof);
 							}}
 						/>
-						<button onclick={() => saveRenamedProfile(prof)} title="Save" aria-label="Save">
+						<button onclick={() => saveRenamedProfile(prof)} title={$_("profiles.actions.save")} aria-label={$_("profiles.actions.save")}>
 							<FloppyDisk size="20" class="text-green-500" />
 						</button>
 					{:else}
 						<label class="grow text-neutral-400" for={`profile-${encodeURIComponent(prof)}`}>{id ? prof.split("/")[1] : prof}</label>
-						<button onclick={() => duplicateProfile(prof)} title="Duplicate" aria-label="Duplicate">
+						<button onclick={() => duplicateProfile(prof)} title={$_("profiles.actions.duplicate")} aria-label={$_("profiles.actions.duplicate")}>
 							<Copy size="20" class="text-neutral-400" />
 						</button>
 						{#if prof != value}
-							<button onclick={() => { renamingProfile = newId = prof; }} title="Rename" aria-label="Rename">
+							<button onclick={() => { renamingProfile = newId = prof; }} title={$_("profiles.actions.rename")} aria-label={$_("profiles.actions.rename")}>
 								<Pencil size="20" class="text-neutral-400" />
 							</button>
-							<button onclick={() => deleteProfile(prof)} title="Delete" aria-label="Delete">
+							<button onclick={() => deleteProfile(prof)} title={$_("profiles.actions.delete")} aria-label={$_("profiles.actions.delete")}>
 								<Trash size="20" class="text-neutral-400" />
 							</button>
 						{/if}
@@ -315,21 +319,21 @@
 	{/snippet}
 </Popup>
 
-<Popup show={showApplicationManager} label="Application profiles">
+<Popup show={showApplicationManager} label={$_("profiles.applicationProfiles")}>
 	{#snippet children()}
-	<button class="mr-1 float-right text-xl text-neutral-300" onclick={() => { showApplicationManager = false; }} aria-label="Close">✕</button>
+	<button class="mr-1 float-right text-xl text-neutral-300" onclick={() => { showApplicationManager = false; }} aria-label={$_("common.close")}>✕</button>
 	<h2 class="text-xl font-semibold text-neutral-300">{device.name}</h2>
-	<span class="text-sm text-neutral-400">If your application isn't listed, try switching to it and back again.</span>
-	<span class="text-sm text-neutral-400">The 'default profile' will activate when the focussed application has no profile associated with it.</span>
+	<span class="text-sm text-neutral-400">{$_("profiles.help.missingApp")}</span>
+	<span class="text-sm text-neutral-400">{$_("profiles.help.defaultBehavior")}</span>
 
 	<table class="w-full text-neutral-300 divide-y divide-neutral-500!">
 		<tbody>
 		{#each Object.entries(applicationProfiles).sort((a, b) => a[0] == "omegadeck_default" ? -1 : b[0] == "omegadeck_default" ? 1 : a[0].localeCompare(b[0])) as [appName, devices]}
 			{#if devices[device.id]}
 				<tr class="h-12">
-					<td>{appName == "omegadeck_default" ? "Default profile" : appName}:</td>
+					<td>{appName == "omegadeck_default" ? $_("profiles.defaultProfile") : appName}:</td>
 					<td class="select-wrapper">
-						<select bind:value={applicationProfiles[appName][device.id]} class="w-full" aria-label="{appName == 'omegadeck_default' ? 'Default profile' : appName} profile">
+						<select bind:value={applicationProfiles[appName][device.id]} class="w-full" aria-label={appName == "omegadeck_default" ? $_("profiles.aria.defaultProfileMapping") : $_("profiles.aria.applicationProfile", { values: { app: appName } })}>
 							{#each Object.entries(folders) as [id, profiles]}
 								{#if id && profiles.length}
 									<optgroup label={id}>
@@ -344,7 +348,7 @@
 								{/if}
 							{/each}
 							<option disabled>──────────</option>
-							<option value={undefined}>Remove application</option>
+							<option value={undefined}>{$_("profiles.removeApplication")}</option>
 						</select>
 					</td>
 				</tr>
@@ -352,10 +356,10 @@
 		{/each}
 		<tr class="h-12">
 			<td class="w-48 select-wrapper">
-				<select bind:value={applicationsAddAppName} class="w-full" aria-label="Select application">
-					<option selected disabled value="omegadeck_select_application">Select application...</option>
+				<select bind:value={applicationsAddAppName} class="w-full" aria-label={$_("profiles.selectApplication")}>
+					<option selected disabled value="omegadeck_select_application">{$_("profiles.selectApplicationOption")}</option>
 					{#if !applicationProfiles["omegadeck_default"] || !applicationProfiles["omegadeck_default"][device.id]}
-						<option value="omegadeck_default">Default profile</option>
+						<option value="omegadeck_default">{$_("profiles.defaultProfile")}</option>
 						{#if applications.filter((appName) => !applicationProfiles[appName] || !applicationProfiles[appName][device.id]).length > 0}
 							<option disabled>──────────</option>
 						{/if}
@@ -368,8 +372,8 @@
 				</select>
 			</td>
 			<td class="w-96 select-wrapper">
-				<select bind:value={applicationsAddProfile} class="w-full" aria-label="Select profile">
-					<option selected disabled value="omegadeck_select_profile">Select profile...</option>
+				<select bind:value={applicationsAddProfile} class="w-full" aria-label={$_("profiles.selectProfile")}>
+					<option selected disabled value="omegadeck_select_profile">{$_("profiles.selectProfileOption")}</option>
 					{#each Object.entries(folders) as [id, profiles]}
 						{#if id && profiles.length}
 							<optgroup label={id}>

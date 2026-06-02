@@ -11,8 +11,10 @@
 	import { PRODUCT_NAME } from "$lib/singletons";
 
 	import { backupConfigDirectory, getBuildInfo, openConfigDirectory, openLogDirectory, restoreConfigDirectory } from "$lib/api/commands";
+	import { _ } from "$lib/i18n";
 	import { message } from "@tauri-apps/plugin-dialog";
 	import { notify } from "$lib/notifications";
+	import { get } from "svelte/store";
 
 	let {
 		fullPage = false,
@@ -29,20 +31,22 @@
 	let buildInfo = $state("");
 	(async () => { buildInfo = await getBuildInfo(); })();
 
+	const t = (key: string, values?: Record<string, unknown>) => get(_)(key, { values });
+
 	async function backupConfig() {
 		await message(
-			"You will be prompted to select a location to save the backup to. The config directory will be compressed and saved there. This may take a while if you have many plugins or profiles.",
-			{ title: "Backing up configuration" },
+			t("settings.dialogs.backup.message"),
+			{ title: t("settings.dialogs.backup.title") },
 		);
 		if (await backupConfigDirectory()) {
-			await message("Successfully backed up the config directory.", { title: "Backup complete" });
+			await message(t("settings.dialogs.backup.successMessage"), { title: t("settings.dialogs.backup.successTitle") });
 		}
 	}
 
 	async function restoreConfig() {
 		await message(
-			"You will be prompted to select a location to restore the backup from. This may take a while if you have many plugins or profiles. The application will restart after the restoration is complete.\n\nYou may encounter issues if you attempt to restore a backup from a different operating system or architecture.",
-			{ title: "Restoring configuration" },
+			t("settings.dialogs.restore.message"),
+			{ title: t("settings.dialogs.restore.title") },
 		);
 		try {
 			await restoreConfigDirectory();
@@ -60,7 +64,7 @@
 			else showPopup = true;
 		}}
 	>
-		Settings
+		{$_("settings.title")}
 	</button>
 {/if}
 
@@ -81,19 +85,19 @@
 					class="px-3 py-1.5 text-sm border-b-2 transition-colors {activeTab === 'general' ? 'text-neutral-200 border-blue-500' : 'text-neutral-400 border-transparent hover:text-neutral-200'}"
 					onclick={() => { activeTab = "general"; }}
 				>
-					General
+					{$_("settings.tabs.general")}
 				</button>
 				<button
 					class="px-3 py-1.5 text-sm border-b-2 transition-colors {activeTab === 'device' ? 'text-neutral-200 border-blue-500' : 'text-neutral-400 border-transparent hover:text-neutral-200'}"
 					onclick={() => { activeTab = "device"; }}
 				>
-					Device
+					{$_("settings.tabs.device")}
 				</button>
 				<button
 					class="px-3 py-1.5 text-sm border-b-2 transition-colors {activeTab === 'advance' ? 'text-neutral-200 border-blue-500' : 'text-neutral-400 border-transparent hover:text-neutral-200'}"
 					onclick={() => { activeTab = "advance"; }}
 				>
-					Advance
+					{$_("settings.tabs.advance")}
 				</button>
 			</div>
 		</div>
@@ -101,34 +105,34 @@
 		{#if activeTab === "general"}
 
 			<div class="flex flex-row items-center m-2 space-x-2">
-				<label for="settings-language" class="text-neutral-400">Language:</label>
+				<label for="settings-language" class="text-neutral-400">{$_("settings.general.language.label")}</label>
 				<div class="select-wrapper">
 					<select bind:value={appState.settings!.language} class="w-32" id="settings-language">
-						<option value="en">English</option>
-						<option value="es">Español</option>
+						<option value="en">{$_("settings.general.language.english")}</option>
+						<option value="es">{$_("settings.general.language.spanish")}</option>
 					</select>
 				</div>
 				{#snippet tooltipContent()}
-					This setting controls the language used by OmegaDeck's own interface where translations are available, and also the plugin text for plugins that provide that language.
+					{$_("settings.general.language.tooltip")}
 				{/snippet}
 				<Tooltip>{@render tooltipContent()}</Tooltip>
 			</div>
 
 			<div class="flex flex-row items-center m-2 space-x-2">
-				<label for="settings-background" class="text-neutral-400">Run in background:</label>
+				<label for="settings-background" class="text-neutral-400">{$_("settings.general.background.label")}</label>
 				<input type="checkbox" bind:checked={appState.settings!.background} id="settings-background" />
-				{#snippet tooltipBg()}If this option is enabled, {PRODUCT_NAME} will minimise to the tray and run in the background.{/snippet}
+				{#snippet tooltipBg()}{$_("settings.general.background.tooltip", { values: { product: PRODUCT_NAME } })}{/snippet}
 				<Tooltip>{@render tooltipBg()}</Tooltip>
 			</div>
 
 			<div class="flex flex-row items-center m-2 space-x-2">
-				<label for="settings-autolaunch" class="text-neutral-400">Start at login:</label>
+				<label for="settings-autolaunch" class="text-neutral-400">{$_("settings.general.autolaunch.label")}</label>
 				<input type="checkbox" bind:checked={appState.settings!.autolaunch} id="settings-autolaunch" />
 				{#snippet tooltipAuto()}
-					If this option is enabled, {PRODUCT_NAME} will automatically start at login.
+					{$_("settings.general.autolaunch.tooltip", { values: { product: PRODUCT_NAME } })}
 					{#if buildInfo?.split("</summary>")[0]?.includes("linux")}
 						<br />
-						If you used Flatpak to install {PRODUCT_NAME}, this option may not function as intended.
+						{$_("settings.general.autolaunch.flatpak", { values: { product: PRODUCT_NAME } })}
 					{/if}
 				{/snippet}
 				<Tooltip>{@render tooltipAuto()}</Tooltip>
@@ -138,7 +142,7 @@
 		{#if activeTab === "device"}
 
 			<div class="flex flex-row items-center m-2 space-x-2">
-				<label for="settings-sleep_timeout_minutes" class="text-neutral-400">Sleep after inactivity:</label>
+				<label for="settings-sleep_timeout_minutes" class="text-neutral-400">{$_("settings.device.sleepTimeout.label")}</label>
 				<input
 					type="number"
 					min="0"
@@ -146,13 +150,13 @@
 					class="w-12 px-1 text-neutral-300 border border-neutral-600 rounded-lg"
 					id="settings-sleep_timeout_minutes"
 				/>
-				<span class="text-neutral-400">minutes</span>
-				{#snippet tooltipSleep()}How many minutes of inactivity will cause devices to enter sleep mode. Set to 0 to disable auto-sleep.{/snippet}
+				<span class="text-neutral-400">{$_("common.minutes")}</span>
+				{#snippet tooltipSleep()}{$_("settings.device.sleepTimeout.tooltip")}{/snippet}
 				<Tooltip>{@render tooltipSleep()}</Tooltip>
 			</div>
 
 			<div class="flex flex-row items-center m-2 space-x-2">
-				<label for="settings-rotation" class="text-neutral-400">Image rotation:</label>
+				<label for="settings-rotation" class="text-neutral-400">{$_("settings.device.rotation.label")}</label>
 				<div class="select-wrapper">
 					<select bind:value={appState.settings!.rotation} id="settings-rotation">
 						<option value={0}>0°</option>
@@ -167,18 +171,18 @@
 		{#if activeTab === "advance"}
 			<div class="mt-2 space-y-0">
 				<div class="flex flex-row items-center m-2 space-x-2">
-					<label for="settings-developer" class="text-neutral-400">Developer mode:</label>
+					<label for="settings-developer" class="text-neutral-400">{$_("settings.advance.developer.label")}</label>
 					<input type="checkbox" bind:checked={appState.settings!.developer} id="settings-developer" />
 					{#snippet tooltipDev()}
-						Enables features that make plugin development and debugging easier. Also exposes all file paths on your device on the local webserver to allow symbolic linking of plugins - disable when not in use.
+						{$_("settings.advance.developer.tooltip")}
 					{/snippet}
 					<Tooltip>{@render tooltipDev()}</Tooltip>
 				</div>
 
 				<div class="flex flex-row items-center m-2 space-x-2">
-					<label for="settings-disableelgato" class="text-neutral-400">Disable Elgato device discovery:</label>
+					<label for="settings-disableelgato" class="text-neutral-400">{$_("settings.advance.disableElgato.label")}</label>
 					<input type="checkbox" bind:checked={appState.settings!.disableelgato} id="settings-disableelgato" />
-					{#snippet tooltipElgato()}Disables discovery of Elgato devices so that they can be managed by other software.{/snippet}
+					{#snippet tooltipElgato()}{$_("settings.advance.disableElgato.tooltip")}{/snippet}
 					<Tooltip>{@render tooltipElgato()}</Tooltip>
 				</div>
 			</div>
@@ -194,28 +198,28 @@
 				onclick={() => backupConfig()}
 			>
 				<ClockCounterClockwise class="mr-1" />
-				Back up config
+				{$_("settings.actions.backupConfig")}
 			</button>
 			<button
 				class="flex flex-row items-center px-2 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
 				onclick={() => restoreConfig()}
 			>
 				<ClockClockwise class="mr-1" />
-				Restore config
+				{$_("settings.actions.restoreConfig")}
 			</button>
 			<button
 				class="flex flex-row items-center px-2 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
 				onclick={() => openConfigDirectory()}
 			>
 				<Gear class="mr-1" />
-				Open config
+				{$_("settings.actions.openConfig")}
 			</button>
 			<button
 				class="flex flex-row items-center px-2 py-1 text-sm text-neutral-300 bg-neutral-700 hover:bg-neutral-600 transition-colors border border-neutral-600 rounded-lg"
 				onclick={() => openLogDirectory()}
 			>
 				<Scroll class="mr-1" />
-				Open logs
+				{$_("settings.actions.openLogs")}
 			</button>
 		</div>
 
@@ -229,7 +233,7 @@
 				class="underline hover:text-neutral-400 transition-colors"
 				onclick={(e) => { e.preventDefault(); window.open("https://github.com/a-orihuela/OpenDeck"); }}
 			>
-				View on GitHub
+				{$_("settings.actions.viewGithub")}
 			</a>
 		</div>
 	</div>
@@ -241,21 +245,21 @@
 			<button
 				class="p-1 text-neutral-300 hover:text-white hover:bg-neutral-700 rounded-md transition-colors"
 				onclick={() => onBack()}
-				aria-label="Back"
+				aria-label={$_("common.back")}
 			>
 				<ArrowLeft size="18" />
 			</button>
-			<h2 class="text-lg font-semibold text-neutral-300">Settings</h2>
+			<h2 class="text-lg font-semibold text-neutral-300">{$_("settings.title")}</h2>
 		</div>
 		<div class="grow min-h-0 overflow-auto pb-6">
 			{@render settingsContent()}
 		</div>
 	</div>
 {:else}
-	<Popup show={showPopup} label="Settings">
+	<Popup show={showPopup} label={$_("settings.title")}>
 		{#snippet children()}
-			<button class="mr-2 my-1 float-right text-xl text-neutral-300" onclick={() => { showPopup = false; }} aria-label="Close">✕</button>
-			<h2 class="m-2 font-semibold text-xl text-neutral-300">Settings</h2>
+			<button class="mr-2 my-1 float-right text-xl text-neutral-300" onclick={() => { showPopup = false; }} aria-label={$_("common.close")}>✕</button>
+			<h2 class="m-2 font-semibold text-xl text-neutral-300">{$_("settings.title")}</h2>
 			{@render settingsContent()}
 		{/snippet}
 	</Popup>

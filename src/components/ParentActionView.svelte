@@ -8,6 +8,7 @@
 
 	import { ACTION_MULTIACTION, ACTION_TOGGLEACTION } from "$lib/constants";
 	import { createInstance, removeInstance as apiRemoveInstance } from "$lib/api/commands";
+	import { _ } from "$lib/i18n";
 	import { tick } from "svelte";
 
 	let { profile = $bindable() }: { profile: Profile } = $props();
@@ -21,6 +22,8 @@
 
 	const children = $derived(profile.keys[appState.inspectedParentAction!.position]!.children!);
 	const parentUuid = $derived(profile.keys[appState.inspectedParentAction!.position]!.action.uuid);
+	const translate = $derived($_);
+	const t = (key: string, values?: Record<string, unknown>) => translate(key, { values });
 
 	function handleDragOver(event: DragEvent) {
 		event.preventDefault();
@@ -110,8 +113,8 @@
 />
 
 <div class="px-6 pt-6 pb-4 text-neutral-300">
-	<button class="float-right text-xl" onclick={() => { appState.inspectedParentAction = null; }} aria-label="Close">✕</button>
-	<h1 class="font-semibold text-2xl">{parentUuid == ACTION_TOGGLEACTION ? "Toggle Action" : "Multi Action"}</h1>
+	<button class="float-right text-xl" onclick={() => { appState.inspectedParentAction = null; }} aria-label={t("common.close")}>✕</button>
+	<h1 class="font-semibold text-2xl">{parentUuid == ACTION_TOGGLEACTION ? t("parentAction.toggleTitle") : t("parentAction.multiTitle")}</h1>
 </div>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -120,7 +123,7 @@
 	class="flex flex-col h-128 overflow-auto"
 	onclick={() => { appState.inspectedInstance = null; }}
 	role="list"
-	aria-label="{parentUuid == 'omegadeck.toggleaction' ? 'Toggle Action' : 'Multi Action'} children"
+	aria-label={t("parentAction.childrenAria", { type: parentUuid == ACTION_TOGGLEACTION ? t("parentAction.toggleTitle") : t("parentAction.multiTitle") })}
 	onkeydown={handleListKeydown}
 >
 	{#each children as instance, index}
@@ -142,14 +145,14 @@
 				scale={3 / 4}
 				role="presentation"
 				tabindex={-1}
-				label={(parentUuid == ACTION_TOGGLEACTION ? "Toggle Action" : "Multi Action") + " action " + (index + 1)}
+				label={t("parentAction.itemLabel", { type: parentUuid == ACTION_TOGGLEACTION ? t("parentAction.toggleTitle") : t("parentAction.multiTitle"), index: index + 1 })}
 			/>
 			<p class="ml-4 text-xl text-neutral-300">{instance.action.name}</p>
 			<button
 				class="ml-auto mr-10"
 				onclick={(e) => { e.stopPropagation(); removeInstance(index); }}
 				tabindex={-1}
-				aria-label="Remove {instance.action.name}"
+				aria-label={t("parentAction.removeActionAria", { name: instance.action.name })}
 			>
 				<Trash size="32" class="text-neutral-400" />
 			</button>
@@ -167,9 +170,9 @@
 		}}
 		role="listitem"
 		tabindex={children.length == 0 ? 0 : -1}
-		aria-label="Drag a new action here or copy one with Control+C and paste with Control+V."
+		aria-label={t("parentAction.dropZoneAria")}
 	>
 		<img src="/builtin/cube.svg" class="m-2 w-24 rounded-xl" alt="" />
-		<p class="ml-4 text-xl text-neutral-400">Drop or paste actions here</p>
+		<p class="ml-4 text-xl text-neutral-400">{t("parentAction.dropZoneText")}</p>
 	</div>
 </div>

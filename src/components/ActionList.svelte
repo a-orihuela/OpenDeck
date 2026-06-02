@@ -3,8 +3,9 @@
 
 	import MagnifyingGlass from "phosphor-svelte/lib/MagnifyingGlass";
 
-	import { ACTION_FOLDER, ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE } from "$lib/constants";
+	import { ACTION_FOLDER, ACTION_NEXTPAGE, ACTION_PREVIOUSPAGE, BUILTIN_PLUGIN } from "$lib/constants";
 	import { getWebserverUrl } from "$lib/ports";
+	import { _ } from "$lib/i18n";
 	import { appState } from "$lib/propertyInspector";
 	
 
@@ -37,6 +38,33 @@
 			})
 			.filter(([_, { actions }]) => actions.length > 0);
 	});
+
+	const translate = $derived($_);
+	const t = (key: string, values?: Record<string, unknown>) => translate(key, { values });
+
+	function localizeCategory(name: string): string {
+		const key = `builtinCategories.${name.toLowerCase()}`;
+		const value = t(key);
+		return value === key ? name : value;
+	}
+
+	function actionLabel(action: Action): string {
+		if (action.plugin === BUILTIN_PLUGIN) {
+			const key = `builtinActions.${action.uuid}.name`;
+			const value = t(key);
+			if (value !== key) return value;
+		}
+		return appState.localisations?.[action.plugin]?.[action.uuid]?.Name ?? action.name;
+	}
+
+	function actionTooltip(action: Action): string {
+		if (action.plugin === BUILTIN_PLUGIN) {
+			const key = `builtinActions.${action.uuid}.tooltip`;
+			const value = t(key);
+			if (value !== key) return value;
+		}
+		return appState.localisations?.[action.plugin]?.[action.uuid]?.Tooltip ?? action.tooltip;
+	}
 
 	function handleListKeydown(event: KeyboardEvent) {
 		if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -88,13 +116,13 @@
 		<input
 			bind:value={query}
 			class="w-full p-1 text-sm text-neutral-300"
-			placeholder="Search actions"
+			placeholder={$_("actions.searchPlaceholder")}
 			type="search"
 			spellcheck="false"
 		/>
 	</div>
 
-	<span id="action-list-hint" class="sr-only">Use arrow keys to navigate between actions within a category.</span>
+	<span id="action-list-hint" class="sr-only">{$_("actions.keyboardHint")}</span>
 	<div class="grow overflow-auto select-none divide-y divide-neutral-800!">
 		{#each filteredCategories as [name, { icon, actions }]}
 			<details open>
@@ -102,16 +130,16 @@
 					{#if icon}
 						<img
 							src={!icon.startsWith("omegadeck/") ? getWebserverUrl(icon) : icon.replace("omegadeck", "")}
-							alt={name}
+							alt={localizeCategory(name)}
 							class="w-5 h-5 rounded-xs ml-1 -mt-1 inline"
 						/>
 					{/if}
-					<span class="ml-1">{name}</span>
+					<span class="ml-1">{localizeCategory(name)}</span>
 				</summary>
 				<div
 					class="grid grid-cols-3 gap-1.5 px-3 py-2"
 					role="listbox"
-					aria-label={name}
+					aria-label={localizeCategory(name)}
 					aria-describedby="action-list-hint"
 					tabindex="-1"
 					onkeydown={handleListKeydown}
@@ -121,11 +149,11 @@
 						<div
 							class="group relative flex items-center justify-center aspect-square p-1.5 bg-neutral-950 hover:bg-neutral-900 transition-colors rounded-lg border border-neutral-800 cursor-grab active:cursor-grabbing"
 							draggable="true"
-							title={appState.localisations?.[action.plugin]?.[action.uuid]?.Tooltip ?? action.tooltip}
+							title={actionTooltip(action)}
 							role="option"
 							aria-selected="false"
 							tabindex={i == 0 ? 0 : -1}
-							aria-label={appState.localisations?.[action.plugin]?.[action.uuid]?.Name ?? action.name}
+							aria-label={actionLabel(action)}
 							ondragstart={(event) => {
 								if (!event.dataTransfer) return;
 								event.dataTransfer.effectAllowed = "copy";
@@ -144,7 +172,7 @@
 							/>
 							<div class="absolute inset-x-0 bottom-0 rounded-b-lg bg-neutral-900/95 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
 								<span class="block text-xs text-center text-neutral-200 truncate leading-tight">
-									{appState.localisations?.[action.plugin]?.[action.uuid]?.Name ?? action.name}
+									{actionLabel(action)}
 								</span>
 							</div>
 						</div>

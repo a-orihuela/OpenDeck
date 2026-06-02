@@ -1,6 +1,7 @@
 import type { Action, Context, Settings } from "../bindings.ts";
 import { getLocalisations, getSettings, setSettings, switchPropertyInspector } from "../api/commands.ts";
 import { onPluginStatusChanged } from "../api/events.ts";
+import { setAppLocale } from "../i18n";
 
 export type CopiedItem =
 	| { type: "instance"; source: Context }
@@ -38,7 +39,11 @@ export function dismissNotification(id: string) {
 	appState.notifications = appState.notifications.filter((item) => item.id !== id);
 }
 
-(async () => { appState.settings = await getSettings(); })();
+(async () => {
+	const settings = await getSettings();
+	appState.settings = settings;
+	setAppLocale(settings.language);
+})();
 
 $effect.root(() => {
 	let prevSettings: Settings | null = null;
@@ -46,6 +51,7 @@ $effect.root(() => {
 		const s = appState.settings;
 		if (!s || s === prevSettings) return;
 		prevSettings = s;
+		setAppLocale(s.language);
 		setSettings(s)
 			.then(() => getLocalisations(s!.language))
 			.then(loc => { appState.localisations = loc; })

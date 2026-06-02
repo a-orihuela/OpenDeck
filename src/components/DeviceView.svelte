@@ -5,6 +5,7 @@
 	import Key from "./Key.svelte";
 
 	import { appState } from "$lib/propertyInspector";
+	import { _ } from "$lib/i18n";
 	
 	import { renderImage } from "$lib/rendererHelper";
 
@@ -176,6 +177,8 @@
 
 	let focusedRow = $state(0);
 	let focusedCol = $state(0);
+	const translate = $derived($_);
+	const t = (key: string, values?: Record<string, unknown>) => translate(key, { values });
 
 	const encoderRowIndex = $derived(device.rows);
 	const touchpointRowIndex = $derived(device.rows + (device.encoders > 0 ? 1 : 0));
@@ -234,7 +237,7 @@
 </script>
 
 {#key device}
-	<span id="grid-description" class="sr-only">Use arrow keys to navigate between keys. Moving to a key will display its property inspector.</span>
+	<span id="grid-description" class="sr-only">{t("deviceView.gridDescription")}</span>
 	<div
 		class="flex flex-col justify-center grow px-16 py-6 overflow-auto"
 		class:items-center={device.columns <= 8}
@@ -264,7 +267,7 @@
 									class="relative cursor-pointer"
 									style={`transform: scale(${112 / closeSize});`}
 									role="gridcell"
-									aria-label="Close folder"
+									aria-label={t("deviceView.closeFolder")}
 									tabindex={focusedRow === r && focusedCol === c ? 0 : -1}
 									onclick={(e) => { e.stopPropagation(); handleExitFolder(); }}
 									onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExitFolder(); }}
@@ -286,7 +289,7 @@
 									ondragstart={(event) => handleDragStart(event, "Keypad", pos)}
 									{handlePaste}
 									size={keySize}
-									label="Folder Key {String.fromCharCode(65 + r)}{c + 1}"
+									label={t("deviceView.folderKeyLabel", { row: String.fromCharCode(65 + r), column: c + 1 })}
 									tabindex={focusedRow === r && focusedCol === c ? 0 : -1}
 								/>
 							{/if}
@@ -309,7 +312,7 @@
 								ondragstart={(event) => handleDragStart(event, "Keypad", pos)}
 								{handlePaste}
 								size={keySize}
-								label="Key {String.fromCharCode(65 + r)}{c + 1}"
+								label={t("deviceView.keyLabel", { row: String.fromCharCode(65 + r), column: c + 1 })}
 								tabindex={focusedRow === r && focusedCol === c ? 0 : -1}
 							/>
 						{/each}
@@ -327,21 +330,21 @@
 			{#each { length: profile.num_pages ?? 1 } as _, i}
 				<button
 					class="w-2.5 h-2.5 rounded-full transition-colors {i === activePage ? 'bg-white' : 'bg-white/30'}"
-					aria-label="Page {i + 1}"
+					aria-label={t("deviceView.pageAria", { index: i + 1 })}
 					onclick={() => handleSetActivePage(i)}
 				></button>
 			{/each}
 			<button
 				class="ml-2 w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
-				aria-label="Add page"
-				title="Add page"
+				aria-label={t("deviceView.addPage")}
+				title={t("deviceView.addPage")}
 				onclick={handleAddPage}
 			>+</button>
 			{#if (profile.num_pages ?? 1) > 1}
 				<button
 					class="w-5 h-5 rounded text-white/60 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm leading-none"
-					aria-label="Remove last page"
-					title="Remove last page"
+					aria-label={t("deviceView.removeLastPage")}
+					title={t("deviceView.removeLastPage")}
 					onclick={handleRemoveLastPage}
 				>−</button>
 			{/if}
@@ -357,7 +360,7 @@
 					ondragstart={(event) => handleDragStart(event, "Encoder", i)}
 					{handlePaste}
 					size={keySize}
-					label="Encoder {i + 1}"
+					label={t("deviceView.encoderLabel", { index: i + 1 })}
 					tabindex={focusedRow === encoderRowIndex && focusedCol === i ? 0 : -1}
 				/>
 			{/each}
@@ -376,7 +379,7 @@
 						{handlePaste}
 						size={keySize}
 						isTouchPoint
-						label="Touch point {i + 1}"
+						label={t("deviceView.touchPointLabel", { index: i + 1 })}
 						tabindex={focusedRow === touchpointRowIndex && focusedCol === i ? 0 : -1}
 					/>
 				{/each}

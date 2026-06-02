@@ -15,6 +15,7 @@
 	import { ACTION_FOLDER, ACTION_MULTIACTION, ACTION_TOGGLEACTION, BUILTIN_PLUGIN } from "$lib/constants";
 	import { enterFolder, removeInstance, triggerVirtualPress as apiTriggerVirtualPress, updateImage } from "$lib/api/commands";
 	import { onKeyMoved, onShowAlert, onShowOk, onUpdateState } from "$lib/api/events";
+	import { _ } from "$lib/i18n";
 	import { tick } from "svelte";
 
 	let {
@@ -268,7 +269,7 @@
 				onclick={(e) => { e.stopPropagation(); paste(); }}
 			>
 				<Clipboard size="18" class="text-neutral-300" />
-				<span class="ml-2"> Paste </span>
+				<span class="ml-2"> {$_("keyMenu.paste")} </span>
 			</button>
 		{:else}
 			<button
@@ -276,21 +277,21 @@
 				onclick={(e) => { e.stopPropagation(); edit(); }}
 			>
 				<Pencil size="18" class="text-neutral-300" />
-				<span class="ml-2"> Edit </span>
+				<span class="ml-2"> {$_("keyMenu.edit")} </span>
 			</button>
 			<button
 				class="flex flex-row items-center w-full p-2 hover:bg-neutral-600 transition-colors cursor-pointer"
 				onclick={(e) => { e.stopPropagation(); copy(); }}
 			>
 				<Copy size="18" class="text-neutral-300" />
-				<span class="ml-2"> Copy </span>
+				<span class="ml-2"> {$_("keyMenu.copy")} </span>
 			</button>
 			<button
 				class="flex flex-row items-center w-full p-2 hover:bg-neutral-600 transition-colors rounded-b-lg cursor-pointer"
 				onclick={(e) => { e.stopPropagation(); clear(); }}
 			>
 				<Trash size="18" class="text-red-400" />
-				<span class="ml-2"> Delete </span>
+				<span class="ml-2"> {$_("keyMenu.delete")} </span>
 			</button>
 		{/if}
 	</div>
