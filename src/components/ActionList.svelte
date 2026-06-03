@@ -2,7 +2,9 @@
 	import type { Action } from "$lib/bindings";
 
 	import MagnifyingGlass from "phosphor-svelte/lib/MagnifyingGlass";
+	import Check from "phosphor-svelte/lib/Check";
 	import Copy from "phosphor-svelte/lib/Copy";
+	import FilePlus from "phosphor-svelte/lib/FilePlus";
 	import FloppyDisk from "phosphor-svelte/lib/FloppyDisk";
 	import Pencil from "phosphor-svelte/lib/Pencil";
 	import Trash from "phosphor-svelte/lib/Trash";
@@ -243,73 +245,81 @@
 	<div class="grow overflow-auto select-none divide-y divide-neutral-800!">
 		<details open>
 			<summary class="pl-4 py-3 text-lg font-semibold text-neutral-300 hover:bg-neutral-800 transition-colors cursor-pointer">
-				{t("sheets.title")}
+				{$_("sheets.title")}
 			</summary>
-			<div class="px-3 pb-3 space-y-2">
+			<div class="px-3 pb-2 space-y-1.5">
 				<input
 					bind:value={newTemplateName}
-					class="w-full p-2 text-sm text-neutral-300 bg-neutral-700 border border-neutral-600 rounded-lg"
-					placeholder={t("sheets.namePlaceholder")}
-					aria-label={t("sheets.namePlaceholder")}
+					class="w-full px-2 py-1.5 text-xs text-neutral-300 bg-neutral-700 border border-neutral-600 rounded-lg"
+					placeholder={$_("sheets.namePlaceholder")}
+					aria-label={$_("sheets.namePlaceholder")}
 				/>
-				<button
-					class="w-full p-2 text-sm text-neutral-300 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-lg"
-					onclick={saveCurrentPageTemplate}
-					disabled={!appState.selectedDevice || !newTemplateName.trim()}
-				>
-					{t("sheets.saveCurrent")}
-				</button>
-				<div class="max-h-52 overflow-auto space-y-2" role="list" aria-label={t("sheets.choose")}>
-					{#if templates.length === 0}
-						<p class="text-xs text-neutral-400">{t("sheets.empty")}</p>
-					{:else}
-						{#each templates as template}
-							<div class={`p-2 rounded-lg border border-neutral-700 ${selectedTemplateId === template.id ? "bg-neutral-800/70" : ""}`}>
-								<button
-									class="w-full text-left"
-									onclick={() => { selectedTemplateId = template.id; }}
-									aria-label={template.name}
-								>
-									<p class="text-sm text-neutral-200 truncate">{template.name}</p>
-									<p class="text-[11px] text-neutral-400">{template.rows}x{template.columns}</p>
-								</button>
-								{#if renamingTemplateId === template.id}
-									<div class="flex items-center gap-1 mt-2">
-										<input
-											bind:value={renameTemplateName}
-											class="grow p-1 text-xs text-neutral-300 bg-neutral-700 border border-neutral-600 rounded"
-											aria-label={t("sheets.rename")}
-											onkeydown={(e) => { if (e.key === "Enter") saveRenameTemplate(template.id); }}
-										/>
-										<button class="p-1" onclick={() => saveRenameTemplate(template.id)} aria-label={t("common.save")}><FloppyDisk size={14} class="text-green-400" /></button>
-										<button class="p-1" onclick={() => { renamingTemplateId = null; }} aria-label={t("common.close")}>✕</button>
-									</div>
-								{:else}
-									<div class="flex items-center gap-2 mt-2">
-										<button class="p-1" onclick={() => duplicateTemplate(template.id)} aria-label={t("sheets.duplicate")}><Copy size={14} class="text-neutral-300" /></button>
-										<button class="p-1" onclick={() => startRenameTemplate(template)} aria-label={t("sheets.rename")}><Pencil size={14} class="text-neutral-300" /></button>
-										<button class="p-1 ml-auto" onclick={() => removeTemplate(template.id)} aria-label={t("sheets.delete")}><Trash size={14} class="text-red-300" /></button>
-									</div>
-								{/if}
-							</div>
-						{/each}
-					{/if}
-				</div>
-				<div class="grid grid-cols-2 gap-2">
+				<div class="grid grid-cols-3 gap-1.5">
 					<button
-						class="p-2 text-xs text-neutral-300 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-lg"
+						class="flex items-center justify-center px-2 py-1.5 text-neutral-300 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-lg"
+						title={$_("sheets.saveCurrent")}
+						aria-label={$_("sheets.saveCurrent")}
+						onclick={saveCurrentPageTemplate}
+						disabled={!appState.selectedDevice || !newTemplateName.trim()}
+					>
+						<FloppyDisk size={13} />
+					</button>
+					<button
+						class="flex items-center justify-center px-2 py-1.5 text-neutral-300 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-lg"
+						title={$_("sheets.applyCurrent")}
+						aria-label={$_("sheets.applyCurrent")}
 						onclick={applyTemplateToCurrentPage}
 						disabled={!appState.selectedDevice || !selectedTemplateId}
 					>
-						{t("sheets.applyCurrent")}
+						<Check size={13} />
 					</button>
 					<button
-						class="p-2 text-xs text-neutral-300 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-lg"
+						class="flex items-center justify-center px-2 py-1.5 text-neutral-300 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-lg"
+						title={$_("sheets.insertAsNewPage")}
+						aria-label={$_("sheets.insertAsNewPage")}
 						onclick={insertTemplateAsPage}
 						disabled={!appState.selectedDevice || !selectedTemplateId}
 					>
-						{t("sheets.insertAsNewPage")}
+						<FilePlus size={13} />
 					</button>
+				</div>
+				<div class="max-h-48 overflow-auto space-y-1.5" role="list" aria-label={t("sheets.choose")}>
+					{#if templates.length === 0}
+						<p class="text-xs text-neutral-400">{$_("sheets.empty")}</p>
+					{:else}
+						{#each templates as template}
+							<div class={`p-1.5 rounded-md border border-neutral-700 ${selectedTemplateId === template.id ? "bg-neutral-800/70" : ""}`}>
+								<div class="flex items-start gap-2">
+									<button
+										class="min-w-0 grow text-left"
+										onclick={() => { selectedTemplateId = template.id; }}
+										aria-label={template.name}
+									>
+										<p class="text-xs text-neutral-200 truncate leading-tight">{template.name}</p>
+										<p class="text-[10px] text-neutral-400 leading-tight">{template.rows}x{template.columns}</p>
+									</button>
+									{#if renamingTemplateId === template.id}
+										<div class="flex items-center gap-1 shrink-0">
+											<input
+												bind:value={renameTemplateName}
+												class="w-28 p-1 text-xs text-neutral-300 bg-neutral-700 border border-neutral-600 rounded"
+												aria-label={t("sheets.rename")}
+												onkeydown={(e) => { if (e.key === "Enter") saveRenameTemplate(template.id); }}
+											/>
+											<button class="p-1" onclick={() => saveRenameTemplate(template.id)} aria-label={t("common.save")}><FloppyDisk size={12} class="text-green-400" /></button>
+											<button class="p-1 text-xs" onclick={() => { renamingTemplateId = null; }} aria-label={t("common.close")}>✕</button>
+										</div>
+									{:else}
+										<div class="flex items-center gap-1 shrink-0">
+											<button class="p-1" onclick={() => duplicateTemplate(template.id)} aria-label={t("sheets.duplicate")}><Copy size={12} class="text-neutral-300" /></button>
+											<button class="p-1" onclick={() => startRenameTemplate(template)} aria-label={t("sheets.rename")}><Pencil size={12} class="text-neutral-300" /></button>
+											<button class="p-1" onclick={() => removeTemplate(template.id)} aria-label={t("sheets.delete")}><Trash size={12} class="text-red-300" /></button>
+										</div>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					{/if}
 				</div>
 			</div>
 		</details>
